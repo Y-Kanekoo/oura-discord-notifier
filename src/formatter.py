@@ -370,20 +370,20 @@ def format_night_report(
     if readiness_score < 70 or sleep_score < 70:
         reminder_desc = (
             ":warning: **今日は早めに就寝を推奨**\n"
-            f"└ Readiness: {readiness_score} / 昨夜の睡眠: {sleep_score}\n\n"
-            ":moon: **今すぐやること**\n"
-            "1. スマホ・PCをオフ\n"
-            "2. 照明を暗くする\n"
-            "3. 目標就寝: **24:00**"
+            f"Readiness: {readiness_score} / 昨夜の睡眠: {sleep_score}\n\n"
+            "**:crescent_moon: 今すぐやること**\n"
+            ":one: スマホ・PCをオフ\n"
+            ":two: 照明を暗くする\n"
+            ":three: 目標就寝: **24:00**"
         )
         reminder_color = 0xFF6B6B  # 赤っぽい
     else:
         reminder_desc = (
             ":sparkles: コンディション良好です\n\n"
-            ":moon: **減速開始のルーティン**\n"
-            "1. スマホ・PCをオフ\n"
-            "2. 照明を暗くする\n"
-            "3. リラックスタイム"
+            "**:crescent_moon: 減速開始のルーティン**\n"
+            ":one: スマホ・PCをオフ\n"
+            ":two: 照明を暗くする\n"
+            ":three: リラックスタイム"
         )
         reminder_color = 0x9B59B6  # 紫
 

@@ -76,9 +76,10 @@ def send_morning_report() -> bool:
             "date": today.isoformat(),
         }
 
-        # データがない場合は前日を試す
+        # データがない場合は前日を試す（各項目を個別にチェック）
         if not data["sleep"]:
             data["sleep"] = oura.get_sleep(yesterday)
+        if not data["sleep_details"]:
             data["sleep_details"] = oura.get_sleep_details(yesterday)
         if not data["readiness"]:
             data["readiness"] = oura.get_readiness(yesterday)
