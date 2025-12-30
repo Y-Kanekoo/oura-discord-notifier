@@ -41,10 +41,11 @@ class OuraClient:
         if target_date is None:
             target_date = date.today() - timedelta(days=1)
 
-        # 睡眠データは翌日にまたがる可能性があるため、前日から当日までの範囲で取得
+        # 睡眠は前夜に開始するため、前日から当日の範囲で検索
+        # 例: 12/30の睡眠データ → 12/29夜〜12/30朝 → start=12/29, end=12/30
         params = {
-            "start_date": target_date.isoformat(),
-            "end_date": (target_date + timedelta(days=1)).isoformat(),
+            "start_date": (target_date - timedelta(days=1)).isoformat(),
+            "end_date": target_date.isoformat(),
         }
 
         data = self._get("sleep", params)

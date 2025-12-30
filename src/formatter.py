@@ -127,6 +127,14 @@ def format_sleep_section(sleep_data: Optional[dict], sleep_details: Optional[dic
                 "inline": True,
             })
 
+        light_sleep_duration = sleep_details.get("light_sleep_duration")
+        if light_sleep_duration:
+            fields.append({
+                "name": ":last_quarter_moon: 浅い睡眠",
+                "value": format_duration(light_sleep_duration),
+                "inline": True,
+            })
+
         if lowest_heart_rate:
             fields.append({
                 "name": ":heart: 最低心拍数",
