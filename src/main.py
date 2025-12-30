@@ -2,78 +2,204 @@
 
 import os
 import sys
-from datetime import date
+from datetime import date, datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 # .envファイルの読み込み（存在する場合のみ）
 try:
     from dotenv import load_dotenv
-    # srcディレクトリの親ディレクトリにある.envを探す
     env_path = Path(__file__).parent.parent / ".env"
     if env_path.exists():
         load_dotenv(env_path)
         print(f"Loaded .env from {env_path}")
 except ImportError:
-    pass  # dotenvがない場合はスキップ（GitHub Actionsでは不要）
+    pass
 
 from oura_client import OuraClient
 from discord_client import DiscordClient
-from formatter import format_daily_report, format_alert_message
+from formatter import (
+    format_morning_report,
+    format_noon_report,
+    format_night_report,
+)
+
+# タイムゾーン
+JST = ZoneInfo("Asia/Tokyo")
+
+# デフォルト設定
+DEFAULT_STEPS_GOAL = 8000
 
 
-def get_env_var(name: str) -> str:
-    """環境変数を取得（必須）"""
-    value = os.environ.get(name)
-    if not value:
+def get_env_var(name: str, default: str | None = None) -> str:
+    """環境変数を取得"""
+    value = os.environ.get(name, default)
+    if value is None:
         print(f"Error: {name} environment variable is not set")
         sys.exit(1)
     return value
 
 
-def send_daily_report(target_date: date | None = None) -> bool:
-    """毎日のレポートを送信"""
-    # 環境変数から認証情報を取得
+def get_jst_today() -> date:
+    """JSTの今日の日付を取得"""
+    return datetime.now(JST).date()
+
+
+def get_jst_hour() -> int:
+    """JSTの現在時刻（時）を取得"""
+    return datetime.now(JST).hour
+
+
+# =============================================================================
+# 朝通知
+# =============================================================================
+
+def send_morning_report() -> bool:
+    """朝通知：睡眠 + Readiness + 今日の方針"""
     oura_token = get_env_var("OURA_ACCESS_TOKEN")
     discord_webhook = get_env_var("DISCORD_WEBHOOK_URL")
 
-    # クライアントを初期化
     oura = OuraClient(oura_token)
     discord = DiscordClient(discord_webhook)
 
     try:
-        # Ouraからデータを取得
-        print(f"Fetching data for {target_date or 'yesterday'}...")
-        data = oura.get_all_daily_data(target_date)
+        # 前日の睡眠データと当日のReadinessを取得
+        today = get_jst_today()
+        yesterday = today - timedelta(days=1)
 
-        # レポートをフォーマット
-        title, sections = format_daily_report(data)
+        print(f"Fetching morning data for {today}...")
 
-        # Discordに送信
-        print("Sending report to Discord...")
+        data = {
+            "sleep": oura.get_sleep(today),  # 当日朝までの睡眠
+            "sleep_details": oura.get_sleep_details(today),
+            "readiness": oura.get_readiness(today),
+            "date": today.isoformat(),
+        }
+
+        # データがない場合は前日を試す
+        if not data["sleep"]:
+            data["sleep"] = oura.get_sleep(yesterday)
+            data["sleep_details"] = oura.get_sleep_details(yesterday)
+        if not data["readiness"]:
+            data["readiness"] = oura.get_readiness(yesterday)
+
+        title, sections = format_morning_report(data)
+
+        print("Sending morning report to Discord...")
         success = discord.send_health_report(title, sections)
 
         if success:
-            print("Report sent successfully!")
-
-            # 警告があれば追加で送信
-            alert = format_alert_message(data)
-            if alert:
-                print("Sending alert message...")
-                discord.send_message(alert)
+            print("Morning report sent successfully!")
         else:
-            print("Failed to send report")
+            print("Failed to send morning report")
 
         return success
 
     except Exception as e:
         print(f"Error: {e}")
-        # エラーをDiscordにも通知
         try:
-            discord.send_message(f":x: **エラーが発生しました**\n```{str(e)}```")
+            discord.send_message(f":x: **朝通知エラー**\n```{str(e)}```")
         except Exception:
             pass
         return False
 
+
+# =============================================================================
+# 昼通知
+# =============================================================================
+
+def send_noon_report() -> bool:
+    """昼通知：活動進捗（条件付き）"""
+    oura_token = get_env_var("OURA_ACCESS_TOKEN")
+    discord_webhook = get_env_var("DISCORD_WEBHOOK_URL")
+    steps_goal = int(get_env_var("DAILY_STEPS_GOAL", str(DEFAULT_STEPS_GOAL)))
+
+    oura = OuraClient(oura_token)
+    discord = DiscordClient(discord_webhook)
+
+    try:
+        today = get_jst_today()
+        current_hour = get_jst_hour()
+
+        print(f"Fetching noon data for {today} at {current_hour}:00...")
+
+        activity = oura.get_activity(today)
+
+        if not activity:
+            print("No activity data available yet. Skipping noon notification.")
+            return True  # データがないのは正常（まだ同期されていない）
+
+        title, sections, should_send = format_noon_report(
+            activity,
+            steps_goal,
+            current_hour,
+        )
+
+        if not should_send:
+            print(f"Activity on track. Skipping noon notification.")
+            print(f"  Steps: {activity.get('steps', 0):,} / Goal pace: OK")
+            return True
+
+        print("Sending noon report to Discord...")
+        success = discord.send_health_report(title, sections)
+
+        if success:
+            print("Noon report sent successfully!")
+        else:
+            print("Failed to send noon report")
+
+        return success
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return False
+
+
+# =============================================================================
+# 夜通知
+# =============================================================================
+
+def send_night_report() -> bool:
+    """夜通知：減速リマインダー"""
+    oura_token = get_env_var("OURA_ACCESS_TOKEN")
+    discord_webhook = get_env_var("DISCORD_WEBHOOK_URL")
+
+    oura = OuraClient(oura_token)
+    discord = DiscordClient(discord_webhook)
+
+    try:
+        today = get_jst_today()
+
+        print(f"Fetching night data for {today}...")
+
+        # 当日のReadinessと前日の睡眠スコアを取得
+        readiness = oura.get_readiness(today)
+        sleep = oura.get_sleep(today)
+
+        title, message = format_night_report(readiness, sleep)
+
+        print("Sending night report to Discord...")
+        success = discord.send_message(f"{title}\n\n{message}")
+
+        if success:
+            print("Night report sent successfully!")
+        else:
+            print("Failed to send night report")
+
+        return success
+
+    except Exception as e:
+        print(f"Error: {e}")
+        try:
+            discord.send_message(f":x: **夜通知エラー**\n```{str(e)}```")
+        except Exception:
+            pass
+        return False
+
+
+# =============================================================================
+# メイン
+# =============================================================================
 
 def main():
     """メイン関数"""
@@ -81,9 +207,11 @@ def main():
 
     parser = argparse.ArgumentParser(description="Oura Ring to Discord Notifier")
     parser.add_argument(
-        "--date",
+        "--type",
         type=str,
-        help="Target date (YYYY-MM-DD format). Defaults to yesterday.",
+        choices=["morning", "noon", "night"],
+        default="morning",
+        help="Notification type: morning (default), noon, or night",
     )
     parser.add_argument(
         "--test",
@@ -94,28 +222,26 @@ def main():
     args = parser.parse_args()
 
     if args.test:
-        # テストモード
         discord_webhook = get_env_var("DISCORD_WEBHOOK_URL")
         discord = DiscordClient(discord_webhook)
-        success = discord.send_message(":white_check_mark: **テスト成功！** Oura Discord Notifierが正常に動作しています。")
-        if success:
-            print("Test message sent successfully!")
-        else:
-            print("Failed to send test message")
+        success = discord.send_message(
+            ":white_check_mark: **テスト成功！**\n"
+            "Oura Discord Notifierが正常に動作しています。"
+        )
+        print("Test message sent!" if success else "Failed to send test message")
         sys.exit(0 if success else 1)
 
-    # 日付を解析
-    target_date = None
-    if args.date:
-        try:
-            target_date = date.fromisoformat(args.date)
-        except ValueError:
-            print(f"Error: Invalid date format: {args.date}")
-            print("Use YYYY-MM-DD format (e.g., 2024-01-15)")
-            sys.exit(1)
+    # 通知タイプに応じて実行
+    if args.type == "morning":
+        success = send_morning_report()
+    elif args.type == "noon":
+        success = send_noon_report()
+    elif args.type == "night":
+        success = send_night_report()
+    else:
+        print(f"Unknown notification type: {args.type}")
+        success = False
 
-    # レポートを送信
-    success = send_daily_report(target_date)
     sys.exit(0 if success else 1)
 
 

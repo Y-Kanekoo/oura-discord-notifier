@@ -1,4 +1,4 @@
-"""Message Formatter for Discord"""
+"""Message Formatter for Discord - 朝・昼・夜の通知対応"""
 
 from typing import Optional
 
@@ -36,6 +36,32 @@ def format_duration(seconds: int) -> str:
         return f"{minutes}分"
 
 
+def get_today_policy(readiness_score: int) -> tuple[str, str, int]:
+    """今日の方針を決定する"""
+    if readiness_score >= 85:
+        return (
+            ":fire: 攻める",
+            "コンディション良好！今日は積極的に動こう",
+            0x00FF00,  # 緑
+        )
+    elif readiness_score >= 70:
+        return (
+            ":arrows_counterclockwise: 維持",
+            "いつも通りのペースで過ごそう",
+            0xFFFF00,  # 黄
+        )
+    else:
+        return (
+            ":battery: 回復",
+            "無理せず休息を優先しよう",
+            0xFF0000,  # 赤
+        )
+
+
+# =============================================================================
+# 朝通知用フォーマッター
+# =============================================================================
+
 def format_sleep_section(sleep_data: Optional[dict], sleep_details: Optional[dict] = None) -> dict:
     """睡眠データをEmbed用セクションに変換"""
     if not sleep_data:
@@ -46,9 +72,7 @@ def format_sleep_section(sleep_data: Optional[dict], sleep_details: Optional[dic
         }
 
     score = sleep_data.get("score", 0)
-
     description = f"**スコア: {score}** {get_score_emoji(score)} ({get_score_label(score)})"
-
     fields = []
 
     # 詳細データがある場合は実際の睡眠時間を表示
@@ -56,9 +80,8 @@ def format_sleep_section(sleep_data: Optional[dict], sleep_details: Optional[dic
         total_sleep_duration = sleep_details.get("total_sleep_duration")
         deep_sleep_duration = sleep_details.get("deep_sleep_duration")
         rem_sleep_duration = sleep_details.get("rem_sleep_duration")
-        light_sleep_duration = sleep_details.get("light_sleep_duration")
-        average_hrv = sleep_details.get("average_hrv")
         lowest_heart_rate = sleep_details.get("lowest_heart_rate")
+        average_hrv = sleep_details.get("average_hrv")
 
         if total_sleep_duration:
             fields.append({
@@ -81,13 +104,6 @@ def format_sleep_section(sleep_data: Optional[dict], sleep_details: Optional[dic
                 "inline": True,
             })
 
-        if light_sleep_duration:
-            fields.append({
-                "name": ":last_quarter_moon: 浅い睡眠",
-                "value": format_duration(light_sleep_duration),
-                "inline": True,
-            })
-
         if lowest_heart_rate:
             fields.append({
                 "name": ":heart: 最低心拍数",
@@ -101,41 +117,14 @@ def format_sleep_section(sleep_data: Optional[dict], sleep_details: Optional[dic
                 "value": f"{average_hrv:.0f} ms",
                 "inline": True,
             })
-    else:
-        # 詳細データがない場合はcontributorsのスコアを表示
-        contributors = sleep_data.get("contributors", {})
-        total_sleep = contributors.get("total_sleep", 0)
-        deep_sleep = contributors.get("deep_sleep", 0)
-        rem_sleep = contributors.get("rem_sleep", 0)
-
-        if total_sleep:
-            fields.append({
-                "name": ":bed: 総睡眠時間",
-                "value": f"スコア: {total_sleep}",
-                "inline": True,
-            })
-
-        if deep_sleep:
-            fields.append({
-                "name": ":new_moon: 深い睡眠",
-                "value": f"スコア: {deep_sleep}",
-                "inline": True,
-            })
-
-        if rem_sleep:
-            fields.append({
-                "name": ":crescent_moon: レム睡眠",
-                "value": f"スコア: {rem_sleep}",
-                "inline": True,
-            })
 
     # スコアに応じた色
     if score >= 85:
-        color = 0x00FF00  # 緑
+        color = 0x00FF00
     elif score >= 70:
-        color = 0xFFFF00  # 黄
+        color = 0xFFFF00
     else:
-        color = 0xFF0000  # 赤
+        color = 0xFF0000
 
     return {
         "title": ":zzz: 睡眠",
@@ -156,9 +145,7 @@ def format_readiness_section(readiness_data: Optional[dict]) -> dict:
 
     score = readiness_data.get("score", 0)
     contributors = readiness_data.get("contributors", {})
-
     description = f"**スコア: {score}** {get_score_emoji(score)} ({get_score_label(score)})"
-
     fields = []
 
     recovery_index = contributors.get("recovery_index")
@@ -185,7 +172,6 @@ def format_readiness_section(readiness_data: Optional[dict]) -> dict:
             "inline": True,
         })
 
-    # スコアに応じた色
     if score >= 85:
         color = 0x00FF00
     elif score >= 70:
@@ -201,69 +187,159 @@ def format_readiness_section(readiness_data: Optional[dict]) -> dict:
     }
 
 
-def format_activity_section(activity_data: Optional[dict]) -> dict:
-    """活動データをembed用セクションに変換"""
-    if not activity_data:
-        return {
-            "title": ":runner: 活動",
-            "description": "データがありません",
-            "color": 0x808080,
-        }
-
-    score = activity_data.get("score", 0)
-    steps = activity_data.get("steps", 0)
-    active_calories = activity_data.get("active_calories", 0)
-    total_calories = activity_data.get("total_calories", 0)
-
-    description = f"**スコア: {score}** {get_score_emoji(score)} ({get_score_label(score)})"
-
-    fields = [
-        {
-            "name": ":footprints: 歩数",
-            "value": f"{steps:,} 歩",
-            "inline": True,
-        },
-        {
-            "name": ":fire: アクティブカロリー",
-            "value": f"{active_calories:,} kcal",
-            "inline": True,
-        },
-        {
-            "name": ":hamburger: 総消費カロリー",
-            "value": f"{total_calories:,} kcal",
-            "inline": True,
-        },
-    ]
-
-    # スコアに応じた色
-    if score >= 85:
-        color = 0x00FF00
-    elif score >= 70:
-        color = 0xFFFF00
-    else:
-        color = 0xFF0000
+def format_policy_section(readiness_score: int) -> dict:
+    """今日の方針セクションを生成"""
+    policy, message, color = get_today_policy(readiness_score)
 
     return {
-        "title": ":runner: 活動",
-        "description": description,
-        "fields": fields,
+        "title": f":dart: 今日の方針: {policy}",
+        "description": message,
         "color": color,
     }
 
 
-def format_daily_report(data: dict) -> tuple[str, list[dict]]:
-    """1日分のレポートをフォーマット"""
+def format_morning_report(data: dict) -> tuple[str, list[dict]]:
+    """朝通知：睡眠 + Readiness + 今日の方針（活動なし）"""
     date_str = data.get("date", "不明")
-
     title = f":sunrise: **おはようございます！** ({date_str})"
+
+    readiness = data.get("readiness")
+    readiness_score = readiness.get("score", 70) if readiness else 70
 
     sections = [
         format_sleep_section(data.get("sleep"), data.get("sleep_details")),
-        format_readiness_section(data.get("readiness")),
-        format_activity_section(data.get("activity")),
+        format_readiness_section(readiness),
+        format_policy_section(readiness_score),
     ]
 
     return title, sections
+
+
+# =============================================================================
+# 昼通知用フォーマッター
+# =============================================================================
+
+def format_noon_report(
+    activity_data: Optional[dict],
+    steps_goal: int,
+    current_hour: int = 13,
+) -> tuple[str, list[dict], bool]:
+    """
+    昼通知：活動進捗（条件付き）
+
+    Returns:
+        tuple: (タイトル, セクション, 送信すべきか)
+    """
+    if not activity_data:
+        return "", [], False
+
+    steps = activity_data.get("steps", 0)
+
+    # 13時時点での目標ペースを計算
+    # 活動時間を8:00-23:00（15時間）と仮定
+    # 13:00は活動開始から5時間 = 5/15 = 33%
+    active_hours = 15  # 8:00-23:00
+    hours_since_start = current_hour - 8  # 8時起点
+    if hours_since_start < 0:
+        hours_since_start = 0
+
+    expected_progress = hours_since_start / active_hours
+    expected_steps = int(steps_goal * expected_progress)
+
+    # 目標ペースの70%未満なら通知（30%以上遅れ）
+    threshold = expected_steps * 0.7
+    should_send = steps < threshold
+
+    if not should_send:
+        return "", [], False
+
+    # 進捗率を計算
+    progress_percent = (steps / steps_goal * 100) if steps_goal > 0 else 0
+    remaining_steps = max(0, steps_goal - steps)
+
+    title = ":walking: **活動リマインダー**"
+
+    # 進捗バーを生成
+    bar_length = 10
+    filled = int(progress_percent / 10)
+    bar = "█" * filled + "░" * (bar_length - filled)
+
+    sections = [
+        {
+            "title": ":footprints: 歩数の進捗",
+            "description": f"**{steps:,} / {steps_goal:,} 歩** ({progress_percent:.0f}%)\n`{bar}`",
+            "color": 0xFF9900,  # オレンジ
+            "fields": [
+                {
+                    "name": ":chart_with_downwards_trend: 目標ペース",
+                    "value": f"{expected_steps:,} 歩",
+                    "inline": True,
+                },
+                {
+                    "name": ":warning: 差分",
+                    "value": f"-{expected_steps - steps:,} 歩",
+                    "inline": True,
+                },
+                {
+                    "name": ":bulb: 今すぐできること",
+                    "value": "10分歩く（約1,000歩）",
+                    "inline": False,
+                },
+            ],
+        },
+    ]
+
+    return title, sections, should_send
+
+
+# =============================================================================
+# 夜通知用フォーマッター
+# =============================================================================
+
+def format_night_report(
+    readiness_data: Optional[dict],
+    sleep_data: Optional[dict],
+) -> tuple[str, str]:
+    """
+    夜通知：減速リマインダー（データ連動）
+
+    Returns:
+        tuple: (タイトル, メッセージ)
+    """
+    readiness_score = readiness_data.get("score", 70) if readiness_data else 70
+    sleep_score = sleep_data.get("score", 70) if sleep_data else 70
+
+    title = ":night_with_stars: **減速開始**（就寝90分前）"
+
+    # コンディションに応じてメッセージを変える
+    if readiness_score < 70 or sleep_score < 70:
+        message = (
+            ":warning: **今日は早めに就寝を推奨**\n"
+            f"└ Readiness: {readiness_score} / 睡眠スコア: {sleep_score}\n\n"
+            ":moon: **今すぐやること**\n"
+            "1. スマホ・PCをオフ\n"
+            "2. 照明を暗くする\n"
+            "3. 目標就寝: **24:00**"
+        )
+    else:
+        message = (
+            ":sparkles: コンディション良好です\n\n"
+            ":moon: **減速開始のルーティン**\n"
+            "1. スマホ・PCをオフ\n"
+            "2. 照明を暗くする\n"
+            "3. リラックスタイム"
+        )
+
+    return title, message
+
+
+# =============================================================================
+# 後方互換性のための関数
+# =============================================================================
+
+def format_daily_report(data: dict) -> tuple[str, list[dict]]:
+    """後方互換性：format_morning_reportのエイリアス"""
+    return format_morning_report(data)
 
 
 def format_alert_message(data: dict) -> Optional[str]:

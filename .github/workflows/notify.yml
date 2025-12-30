@@ -1,20 +1,34 @@
-name: Send Daily Oura Report
+name: Oura Discord Notifier
 
 on:
-  # 毎朝7:00 JST (22:00 UTC前日) に実行
   schedule:
-    - cron: '0 22 * * *'
+    # 朝通知: 09:00 JST = 00:00 UTC
+    - cron: '0 0 * * *'
+    # 昼通知: 13:00 JST = 04:00 UTC
+    - cron: '0 4 * * *'
+    # 夜通知: 23:30 JST = 14:30 UTC
+    - cron: '30 14 * * *'
 
-  # 手動実行も可能
+  # 手動実行
   workflow_dispatch:
     inputs:
-      date:
-        description: 'Target date (YYYY-MM-DD format, defaults to yesterday)'
-        required: false
-        type: string
+      type:
+        description: 'Notification type'
+        required: true
+        default: 'morning'
+        type: choice
+        options:
+          - morning
+          - noon
+          - night
+
+# 2重送信防止
+concurrency:
+  group: oura-notify-${{ github.event.schedule || github.event.inputs.type || 'manual' }}
+  cancel-in-progress: false
 
 jobs:
-  send-report:
+  send-notification:
     runs-on: ubuntu-latest
 
     steps:
@@ -31,14 +45,36 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Send daily report
+      - name: Determine notification type
+        id: notify-type
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "type=${{ github.event.inputs.type }}" >> $GITHUB_OUTPUT
+          else
+            # スケジュール実行時はcron式から判定
+            CRON="${{ github.event.schedule }}"
+            case "$CRON" in
+              "0 0 * * *")
+                echo "type=morning" >> $GITHUB_OUTPUT
+                ;;
+              "0 4 * * *")
+                echo "type=noon" >> $GITHUB_OUTPUT
+                ;;
+              "30 14 * * *")
+                echo "type=night" >> $GITHUB_OUTPUT
+                ;;
+              *)
+                echo "type=morning" >> $GITHUB_OUTPUT
+                ;;
+            esac
+          fi
+
+      - name: Send notification
         env:
           OURA_ACCESS_TOKEN: ${{ secrets.OURA_ACCESS_TOKEN }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DAILY_STEPS_GOAL: ${{ vars.DAILY_STEPS_GOAL || '8000' }}
+          TZ: Asia/Tokyo
         run: |
           cd src
-          if [ -n "${{ github.event.inputs.date }}" ]; then
-            python main.py --date "${{ github.event.inputs.date }}"
-          else
-            python main.py
-          fi
+          python main.py --type ${{ steps.notify-type.outputs.type }}
