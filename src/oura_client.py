@@ -22,7 +22,7 @@ class OuraClient:
         return response.json()
 
     def get_sleep(self, target_date: Optional[date] = None) -> Optional[dict]:
-        """睡眠データを取得"""
+        """睡眠データを取得（日次サマリー）"""
         if target_date is None:
             target_date = date.today() - timedelta(days=1)
 
@@ -33,6 +33,27 @@ class OuraClient:
 
         data = self._get("daily_sleep", params)
         if data.get("data"):
+            return data["data"][0]
+        return None
+
+    def get_sleep_details(self, target_date: Optional[date] = None) -> Optional[dict]:
+        """睡眠の詳細データを取得（実際の睡眠時間など）"""
+        if target_date is None:
+            target_date = date.today() - timedelta(days=1)
+
+        # 睡眠データは翌日にまたがる可能性があるため、前日から当日までの範囲で取得
+        params = {
+            "start_date": target_date.isoformat(),
+            "end_date": (target_date + timedelta(days=1)).isoformat(),
+        }
+
+        data = self._get("sleep", params)
+        if data.get("data"):
+            # 対象日の睡眠データを探す（type="long_sleep"がメインの睡眠）
+            for sleep in data["data"]:
+                if sleep.get("type") == "long_sleep":
+                    return sleep
+            # long_sleepがなければ最初のデータを返す
             return data["data"][0]
         return None
 
@@ -77,6 +98,7 @@ class OuraClient:
         """1日分の全データを取得"""
         return {
             "sleep": self.get_sleep(target_date),
+            "sleep_details": self.get_sleep_details(target_date),
             "readiness": self.get_readiness(target_date),
             "activity": self.get_activity(target_date),
             "date": (target_date or date.today() - timedelta(days=1)).isoformat(),

@@ -2,7 +2,19 @@
 
 import os
 import sys
-from datetime import date, timedelta
+from datetime import date
+from pathlib import Path
+
+# .envファイルの読み込み（存在する場合のみ）
+try:
+    from dotenv import load_dotenv
+    # srcディレクトリの親ディレクトリにある.envを探す
+    env_path = Path(__file__).parent.parent / ".env"
+    if env_path.exists():
+        load_dotenv(env_path)
+        print(f"Loaded .env from {env_path}")
+except ImportError:
+    pass  # dotenvがない場合はスキップ（GitHub Actionsでは不要）
 
 from oura_client import OuraClient
 from discord_client import DiscordClient

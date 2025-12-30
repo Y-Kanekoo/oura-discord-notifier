@@ -36,7 +36,7 @@ def format_duration(seconds: int) -> str:
         return f"{minutes}分"
 
 
-def format_sleep_section(sleep_data: Optional[dict]) -> dict:
+def format_sleep_section(sleep_data: Optional[dict], sleep_details: Optional[dict] = None) -> dict:
     """睡眠データをEmbed用セクションに変換"""
     if not sleep_data:
         return {
@@ -46,37 +46,88 @@ def format_sleep_section(sleep_data: Optional[dict]) -> dict:
         }
 
     score = sleep_data.get("score", 0)
-    contributors = sleep_data.get("contributors", {})
-
-    # 睡眠時間を計算（秒 → 時間:分）
-    total_sleep = contributors.get("total_sleep", 0)
-    deep_sleep = contributors.get("deep_sleep", 0)
-    rem_sleep = contributors.get("rem_sleep", 0)
 
     description = f"**スコア: {score}** {get_score_emoji(score)} ({get_score_label(score)})"
 
     fields = []
 
-    if total_sleep:
-        fields.append({
-            "name": ":bed: 総睡眠時間",
-            "value": f"スコア: {total_sleep}",
-            "inline": True,
-        })
+    # 詳細データがある場合は実際の睡眠時間を表示
+    if sleep_details:
+        total_sleep_duration = sleep_details.get("total_sleep_duration")
+        deep_sleep_duration = sleep_details.get("deep_sleep_duration")
+        rem_sleep_duration = sleep_details.get("rem_sleep_duration")
+        light_sleep_duration = sleep_details.get("light_sleep_duration")
+        average_hrv = sleep_details.get("average_hrv")
+        lowest_heart_rate = sleep_details.get("lowest_heart_rate")
 
-    if deep_sleep:
-        fields.append({
-            "name": ":new_moon: 深い睡眠",
-            "value": f"スコア: {deep_sleep}",
-            "inline": True,
-        })
+        if total_sleep_duration:
+            fields.append({
+                "name": ":bed: 総睡眠時間",
+                "value": format_duration(total_sleep_duration),
+                "inline": True,
+            })
 
-    if rem_sleep:
-        fields.append({
-            "name": ":crescent_moon: レム睡眠",
-            "value": f"スコア: {rem_sleep}",
-            "inline": True,
-        })
+        if deep_sleep_duration:
+            fields.append({
+                "name": ":new_moon: 深い睡眠",
+                "value": format_duration(deep_sleep_duration),
+                "inline": True,
+            })
+
+        if rem_sleep_duration:
+            fields.append({
+                "name": ":crescent_moon: レム睡眠",
+                "value": format_duration(rem_sleep_duration),
+                "inline": True,
+            })
+
+        if light_sleep_duration:
+            fields.append({
+                "name": ":last_quarter_moon: 浅い睡眠",
+                "value": format_duration(light_sleep_duration),
+                "inline": True,
+            })
+
+        if lowest_heart_rate:
+            fields.append({
+                "name": ":heart: 最低心拍数",
+                "value": f"{lowest_heart_rate} bpm",
+                "inline": True,
+            })
+
+        if average_hrv:
+            fields.append({
+                "name": ":chart_with_upwards_trend: 平均HRV",
+                "value": f"{average_hrv:.0f} ms",
+                "inline": True,
+            })
+    else:
+        # 詳細データがない場合はcontributorsのスコアを表示
+        contributors = sleep_data.get("contributors", {})
+        total_sleep = contributors.get("total_sleep", 0)
+        deep_sleep = contributors.get("deep_sleep", 0)
+        rem_sleep = contributors.get("rem_sleep", 0)
+
+        if total_sleep:
+            fields.append({
+                "name": ":bed: 総睡眠時間",
+                "value": f"スコア: {total_sleep}",
+                "inline": True,
+            })
+
+        if deep_sleep:
+            fields.append({
+                "name": ":new_moon: 深い睡眠",
+                "value": f"スコア: {deep_sleep}",
+                "inline": True,
+            })
+
+        if rem_sleep:
+            fields.append({
+                "name": ":crescent_moon: レム睡眠",
+                "value": f"スコア: {rem_sleep}",
+                "inline": True,
+            })
 
     # スコアに応じた色
     if score >= 85:
@@ -207,7 +258,7 @@ def format_daily_report(data: dict) -> tuple[str, list[dict]]:
     title = f":sunrise: **おはようございます！** ({date_str})"
 
     sections = [
-        format_sleep_section(data.get("sleep")),
+        format_sleep_section(data.get("sleep"), data.get("sleep_details")),
         format_readiness_section(data.get("readiness")),
         format_activity_section(data.get("activity")),
     ]
