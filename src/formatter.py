@@ -1,5 +1,6 @@
 """Message Formatter for Discord - 朝・昼・夜の通知対応"""
 
+from datetime import datetime
 from typing import Optional
 
 
@@ -62,6 +63,15 @@ def get_today_policy(readiness_score: int) -> tuple[str, str, int]:
 # 朝通知用フォーマッター
 # =============================================================================
 
+def format_time_from_iso(iso_string: str) -> str:
+    """ISO形式の時刻から HH:MM 形式を取得"""
+    try:
+        dt = datetime.fromisoformat(iso_string.replace("Z", "+00:00"))
+        return dt.strftime("%H:%M")
+    except (ValueError, AttributeError):
+        return "不明"
+
+
 def format_sleep_section(sleep_data: Optional[dict], sleep_details: Optional[dict] = None) -> dict:
     """睡眠データをEmbed用セクションに変換"""
     if not sleep_data:
@@ -77,6 +87,19 @@ def format_sleep_section(sleep_data: Optional[dict], sleep_details: Optional[dic
 
     # 詳細データがある場合は実際の睡眠時間を表示
     if sleep_details:
+        # 就寝・起床時刻
+        bedtime_start = sleep_details.get("bedtime_start")
+        bedtime_end = sleep_details.get("bedtime_end")
+
+        if bedtime_start and bedtime_end:
+            start_time = format_time_from_iso(bedtime_start)
+            end_time = format_time_from_iso(bedtime_end)
+            fields.append({
+                "name": ":clock10: 就寝 → 起床",
+                "value": f"{start_time} → {end_time}",
+                "inline": True,
+            })
+
         total_sleep_duration = sleep_details.get("total_sleep_duration")
         deep_sleep_duration = sleep_details.get("deep_sleep_duration")
         rem_sleep_duration = sleep_details.get("rem_sleep_duration")
@@ -299,38 +322,78 @@ def format_noon_report(
 def format_night_report(
     readiness_data: Optional[dict],
     sleep_data: Optional[dict],
-) -> tuple[str, str]:
+    activity_data: Optional[dict] = None,
+) -> tuple[str, list[dict]]:
     """
-    夜通知：減速リマインダー（データ連動）
+    夜通知：今日の結果 + 減速リマインダー（データ連動）
 
     Returns:
-        tuple: (タイトル, メッセージ)
+        tuple: (タイトル, セクションリスト)
     """
     readiness_score = readiness_data.get("score", 70) if readiness_data else 70
     sleep_score = sleep_data.get("score", 70) if sleep_data else 70
 
-    title = ":night_with_stars: **減速開始**（就寝90分前）"
+    title = ":night_with_stars: **おつかれさまでした！**"
 
-    # コンディションに応じてメッセージを変える
+    sections = []
+
+    # 今日の結果セクション
+    if activity_data:
+        steps = activity_data.get("steps", 0)
+        active_calories = activity_data.get("active_calories", 0)
+        activity_score = activity_data.get("score", 0)
+
+        sections.append({
+            "title": ":bar_chart: 今日の結果",
+            "description": f"**活動スコア: {activity_score}** {get_score_emoji(activity_score)}",
+            "color": 0x3498DB,  # 青
+            "fields": [
+                {
+                    "name": ":footprints: 歩数",
+                    "value": f"{steps:,} 歩",
+                    "inline": True,
+                },
+                {
+                    "name": ":fire: アクティブカロリー",
+                    "value": f"{active_calories:,} kcal",
+                    "inline": True,
+                },
+                {
+                    "name": ":zap: Readiness",
+                    "value": f"{readiness_score}",
+                    "inline": True,
+                },
+            ],
+        })
+
+    # 減速リマインダーセクション
     if readiness_score < 70 or sleep_score < 70:
-        message = (
+        reminder_desc = (
             ":warning: **今日は早めに就寝を推奨**\n"
-            f"└ Readiness: {readiness_score} / 睡眠スコア: {sleep_score}\n\n"
+            f"└ Readiness: {readiness_score} / 昨夜の睡眠: {sleep_score}\n\n"
             ":moon: **今すぐやること**\n"
             "1. スマホ・PCをオフ\n"
             "2. 照明を暗くする\n"
             "3. 目標就寝: **24:00**"
         )
+        reminder_color = 0xFF6B6B  # 赤っぽい
     else:
-        message = (
+        reminder_desc = (
             ":sparkles: コンディション良好です\n\n"
             ":moon: **減速開始のルーティン**\n"
             "1. スマホ・PCをオフ\n"
             "2. 照明を暗くする\n"
             "3. リラックスタイム"
         )
+        reminder_color = 0x9B59B6  # 紫
 
-    return title, message
+    sections.append({
+        "title": ":bed: 減速開始（就寝90分前）",
+        "description": reminder_desc,
+        "color": reminder_color,
+    })
+
+    return title, sections
 
 
 # =============================================================================

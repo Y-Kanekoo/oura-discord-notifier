@@ -160,7 +160,7 @@ def send_noon_report() -> bool:
 # =============================================================================
 
 def send_night_report() -> bool:
-    """夜通知：減速リマインダー"""
+    """夜通知：今日の結果 + 減速リマインダー"""
     oura_token = get_env_var("OURA_ACCESS_TOKEN")
     discord_webhook = get_env_var("DISCORD_WEBHOOK_URL")
 
@@ -172,14 +172,15 @@ def send_night_report() -> bool:
 
         print(f"Fetching night data for {today}...")
 
-        # 当日のReadinessと前日の睡眠スコアを取得
+        # 当日のデータを取得
         readiness = oura.get_readiness(today)
         sleep = oura.get_sleep(today)
+        activity = oura.get_activity(today)
 
-        title, message = format_night_report(readiness, sleep)
+        title, sections = format_night_report(readiness, sleep, activity)
 
         print("Sending night report to Discord...")
-        success = discord.send_message(f"{title}\n\n{message}")
+        success = discord.send_health_report(title, sections)
 
         if success:
             print("Night report sent successfully!")
