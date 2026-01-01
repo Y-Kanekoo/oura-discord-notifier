@@ -44,3 +44,6 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Bot settings data
+data/
