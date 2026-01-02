@@ -82,6 +82,15 @@ def format_sleep_section(sleep_data: Optional[dict], sleep_details: Optional[dic
         }
 
     score = sleep_data.get("score", 0)
+    sleep_date = sleep_data.get("day", "")
+    date_label = ""
+    if sleep_date:
+        try:
+            dt = datetime.fromisoformat(sleep_date)
+            date_label = f" ({dt.strftime('%-m/%-d')})"
+        except (ValueError, AttributeError):
+            pass
+
     description = f"**スコア: {score}** {get_score_emoji(score)} ({get_score_label(score)})"
     fields = []
 
@@ -158,7 +167,7 @@ def format_sleep_section(sleep_data: Optional[dict], sleep_details: Optional[dic
         color = 0xFF0000
 
     return {
-        "title": ":zzz: 睡眠",
+        "title": f":zzz: 睡眠{date_label}",
         "description": description,
         "fields": fields,
         "color": color,
@@ -250,75 +259,140 @@ def format_morning_report(data: dict) -> tuple[str, list[dict]]:
 # 昼通知用フォーマッター
 # =============================================================================
 
+def format_date_jp(date_str: str) -> str:
+    """日付文字列を日本語形式に変換（例: 2024-12-31 → 12/31）"""
+    try:
+        dt = datetime.fromisoformat(date_str)
+        return dt.strftime("%-m/%-d")
+    except (ValueError, AttributeError):
+        return date_str
+
+
+def format_sleep_summary_section(sleep_data: Optional[dict], sleep_details: Optional[dict] = None) -> Optional[dict]:
+    """睡眠サマリー（昼通知用の簡易版）"""
+    if not sleep_data:
+        return None
+
+    score = sleep_data.get("score", 0)
+    sleep_date = sleep_data.get("day", "")
+    date_str = f" ({format_date_jp(sleep_date)})" if sleep_date else ""
+
+    # 睡眠時間を取得
+    sleep_time_str = ""
+    time_range = ""
+    if sleep_details:
+        total_sleep = sleep_details.get("total_sleep_duration")
+        if total_sleep:
+            sleep_time_str = f" / {format_duration(total_sleep)}"
+
+        bedtime_start = sleep_details.get("bedtime_start")
+        bedtime_end = sleep_details.get("bedtime_end")
+        if bedtime_start and bedtime_end:
+            start_time = format_time_from_iso(bedtime_start)
+            end_time = format_time_from_iso(bedtime_end)
+            time_range = f"\n:clock10: {start_time} → {end_time}"
+
+    description = f"**スコア: {score}** {get_score_emoji(score)}{sleep_time_str}"
+    if time_range:
+        description += time_range
+
+    if score >= 85:
+        color = 0x00FF00
+    elif score >= 70:
+        color = 0xFFFF00
+    else:
+        color = 0xFF0000
+
+    return {
+        "title": f":zzz: 今朝の睡眠{date_str}",
+        "description": description,
+        "color": color,
+    }
+
+
 def format_noon_report(
     activity_data: Optional[dict],
     steps_goal: int,
     current_hour: int = 13,
+    sleep_data: Optional[dict] = None,
+    sleep_details: Optional[dict] = None,
 ) -> tuple[str, list[dict], bool]:
     """
-    昼通知：活動進捗（条件付き）
+    昼通知：活動進捗 + 睡眠サマリー（条件付き）
 
     Returns:
         tuple: (タイトル, セクション, 送信すべきか)
     """
-    if not activity_data:
-        return "", [], False
+    sections = []
+    should_send = False
 
-    steps = activity_data.get("steps", 0)
+    # 睡眠データがあれば追加（朝に取れなかった場合の補完）
+    sleep_section = format_sleep_summary_section(sleep_data, sleep_details)
+    if sleep_section:
+        sections.append(sleep_section)
+        should_send = True  # 睡眠データがあれば通知
 
-    # 13時時点での目標ペースを計算
-    # 活動時間を8:00-23:00（15時間）と仮定
-    # 13:00は活動開始から5時間 = 5/15 = 33%
-    active_hours = 15  # 8:00-23:00
-    hours_since_start = current_hour - 8  # 8時起点
-    if hours_since_start < 0:
-        hours_since_start = 0
+    # 活動データのチェック
+    if activity_data:
+        steps = activity_data.get("steps", 0)
 
-    expected_progress = hours_since_start / active_hours
-    expected_steps = int(steps_goal * expected_progress)
+        # 13時時点での目標ペースを計算
+        # 活動時間を8:00-23:00（15時間）と仮定
+        # 13:00は活動開始から5時間 = 5/15 = 33%
+        active_hours = 15  # 8:00-23:00
+        hours_since_start = current_hour - 8  # 8時起点
+        if hours_since_start < 0:
+            hours_since_start = 0
 
-    # 目標ペースの70%未満なら通知（30%以上遅れ）
-    threshold = expected_steps * 0.7
-    should_send = steps < threshold
+        expected_progress = hours_since_start / active_hours
+        expected_steps = int(steps_goal * expected_progress)
+
+        # 目標ペースの70%未満なら通知（30%以上遅れ）
+        threshold = expected_steps * 0.7
+        activity_behind = steps < threshold
+
+        if activity_behind:
+            should_send = True
+
+            # 進捗率を計算
+            progress_percent = (steps / steps_goal * 100) if steps_goal > 0 else 0
+
+            # 進捗バーを生成
+            bar_length = 10
+            filled = int(progress_percent / 10)
+            bar = "█" * filled + "░" * (bar_length - filled)
+
+            sections.append({
+                "title": ":footprints: 歩数の進捗",
+                "description": f"**{steps:,} / {steps_goal:,} 歩** ({progress_percent:.0f}%)\n`{bar}`",
+                "color": 0xFF9900,  # オレンジ
+                "fields": [
+                    {
+                        "name": ":chart_with_downwards_trend: 目標ペース",
+                        "value": f"{expected_steps:,} 歩",
+                        "inline": True,
+                    },
+                    {
+                        "name": ":warning: 差分",
+                        "value": f"-{expected_steps - steps:,} 歩",
+                        "inline": True,
+                    },
+                    {
+                        "name": ":bulb: 今すぐできること",
+                        "value": "10分歩く（約1,000歩）",
+                        "inline": False,
+                    },
+                ],
+            })
 
     if not should_send:
         return "", [], False
 
-    # 進捗率を計算
-    progress_percent = (steps / steps_goal * 100) if steps_goal > 0 else 0
-    remaining_steps = max(0, steps_goal - steps)
-
-    title = ":walking: **活動リマインダー**"
-
-    # 進捗バーを生成
-    bar_length = 10
-    filled = int(progress_percent / 10)
-    bar = "█" * filled + "░" * (bar_length - filled)
-
-    sections = [
-        {
-            "title": ":footprints: 歩数の進捗",
-            "description": f"**{steps:,} / {steps_goal:,} 歩** ({progress_percent:.0f}%)\n`{bar}`",
-            "color": 0xFF9900,  # オレンジ
-            "fields": [
-                {
-                    "name": ":chart_with_downwards_trend: 目標ペース",
-                    "value": f"{expected_steps:,} 歩",
-                    "inline": True,
-                },
-                {
-                    "name": ":warning: 差分",
-                    "value": f"-{expected_steps - steps:,} 歩",
-                    "inline": True,
-                },
-                {
-                    "name": ":bulb: 今すぐできること",
-                    "value": "10分歩く（約1,000歩）",
-                    "inline": False,
-                },
-            ],
-        },
-    ]
+    # タイトルを決定
+    if sleep_section and len(sections) == 1:
+        title = ":sun_with_face: **昼のチェックイン**"
+    else:
+        title = ":walking: **昼のチェックイン**"
 
     return title, sections, should_send
 

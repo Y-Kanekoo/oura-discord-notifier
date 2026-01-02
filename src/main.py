@@ -110,7 +110,7 @@ def send_morning_report() -> bool:
 # =============================================================================
 
 def send_noon_report() -> bool:
-    """昼通知：活動進捗（条件付き）"""
+    """昼通知：活動進捗 + 睡眠サマリー（朝に取れなかった場合の補完）"""
     oura_token = get_env_var("OURA_ACCESS_TOKEN")
     discord_webhook = get_env_var("DISCORD_WEBHOOK_URL")
     steps_goal = int(get_env_var("DAILY_STEPS_GOAL", str(DEFAULT_STEPS_GOAL)))
@@ -125,20 +125,25 @@ def send_noon_report() -> bool:
         print(f"Fetching noon data for {today} at {current_hour}:00...")
 
         activity = oura.get_activity(today)
+        sleep = oura.get_sleep(today)
+        sleep_details = oura.get_sleep_details(today)
 
-        if not activity:
-            print("No activity data available yet. Skipping noon notification.")
+        if not activity and not sleep:
+            print("No activity or sleep data available yet. Skipping noon notification.")
             return True  # データがないのは正常（まだ同期されていない）
 
         title, sections, should_send = format_noon_report(
             activity,
             steps_goal,
             current_hour,
+            sleep,
+            sleep_details,
         )
 
         if not should_send:
-            print(f"Activity on track. Skipping noon notification.")
-            print(f"  Steps: {activity.get('steps', 0):,} / Goal pace: OK")
+            print(f"No noon notification needed.")
+            if activity:
+                print(f"  Steps: {activity.get('steps', 0):,} / Goal pace: OK")
             return True
 
         print("Sending noon report to Discord...")

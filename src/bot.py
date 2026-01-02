@@ -6,7 +6,7 @@ import sys
 import discord
 from discord import app_commands
 from discord.ext import commands
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from pathlib import Path
 from typing import Optional
 
@@ -57,6 +57,74 @@ def get_oura_client() -> OuraClient:
     return _oura_client
 
 
+def parse_date(date_str: str, default_date: Optional[date] = None) -> date:
+    """
+    様々な形式の日付文字列をパース
+
+    対応形式:
+    - 今日, きょう, today
+    - 昨日, きのう, yesterday
+    - 一昨日, おととい
+    - N日前 (例: 3日前)
+    - -N (例: -1 = 昨日)
+    - YYYY-MM-DD (2026-01-02)
+    - YYYY/MM/DD (2026/01/02)
+    - MM-DD, MM/DD (01-02, 01/02)
+    - M/D, M-D (1/2, 1-2)
+    - MMDD (0102)
+    - N月D日 (1月2日)
+    """
+    if not date_str:
+        return default_date or date.today()
+
+    s = date_str.strip().lower()
+    today = date.today()
+
+    # 日本語の相対日付
+    if s in ("今日", "きょう", "today"):
+        return today
+    if s in ("昨日", "きのう", "yesterday"):
+        return today - timedelta(days=1)
+    if s in ("一昨日", "おととい"):
+        return today - timedelta(days=2)
+
+    # N日前
+    m = re.match(r"(\d+)日前", s)
+    if m:
+        return today - timedelta(days=int(m.group(1)))
+
+    # -N 形式
+    m = re.match(r"^-(\d+)$", s)
+    if m:
+        return today - timedelta(days=int(m.group(1)))
+
+    # N月D日 形式
+    m = re.match(r"(\d{1,2})月(\d{1,2})日?", s)
+    if m:
+        month, day = int(m.group(1)), int(m.group(2))
+        return date(today.year, month, day)
+
+    # YYYY-MM-DD または YYYY/MM/DD
+    m = re.match(r"(\d{4})[-/](\d{1,2})[-/](\d{1,2})", s)
+    if m:
+        return date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+
+    # MM-DD, MM/DD, M-D, M/D
+    m = re.match(r"^(\d{1,2})[-/](\d{1,2})$", s)
+    if m:
+        month, day = int(m.group(1)), int(m.group(2))
+        return date(today.year, month, day)
+
+    # MMDD (4桁)
+    m = re.match(r"^(\d{2})(\d{2})$", s)
+    if m:
+        month, day = int(m.group(1)), int(m.group(2))
+        return date(today.year, month, day)
+
+    # ISO形式にフォールバック
+    return date.fromisoformat(date_str)
+
+
 def create_embed_from_section(section: dict) -> discord.Embed:
     """フォーマッターのセクションからEmbedを作成"""
     embed = discord.Embed(
@@ -80,7 +148,7 @@ def create_embed_from_section(section: dict) -> discord.Embed:
 # =============================================================================
 
 @bot.tree.command(name="sleep", description="睡眠スコアを表示します")
-@app_commands.describe(date_str="日付（YYYY-MM-DD形式、省略時は昨日）")
+@app_commands.describe(date_str="日付（例: 昨日, 1/1, 01-02, 2026-01-02）省略時は昨日")
 async def sleep_command(interaction: discord.Interaction, date_str: Optional[str] = None):
     """睡眠データを表示"""
     await interaction.response.defer()
@@ -88,11 +156,9 @@ async def sleep_command(interaction: discord.Interaction, date_str: Optional[str
     try:
         oura = get_oura_client()
 
-        # 日付パース
-        if date_str:
-            target_date = date.fromisoformat(date_str)
-        else:
-            target_date = date.today() - timedelta(days=1)
+        # 日付パース（デフォルトは昨日）
+        default_date = date.today() - timedelta(days=1)
+        target_date = parse_date(date_str, default_date) if date_str else default_date
 
         sleep_data = oura.get_sleep(target_date)
         sleep_details = oura.get_sleep_details(target_date)
@@ -113,7 +179,7 @@ async def sleep_command(interaction: discord.Interaction, date_str: Optional[str
 
 
 @bot.tree.command(name="readiness", description="Readiness（準備度）スコアを表示します")
-@app_commands.describe(date_str="日付（YYYY-MM-DD形式、省略時は今日）")
+@app_commands.describe(date_str="日付（例: 今日, 昨日, 1/1, 01-02）省略時は今日")
 async def readiness_command(interaction: discord.Interaction, date_str: Optional[str] = None):
     """Readinessデータを表示"""
     await interaction.response.defer()
@@ -121,10 +187,8 @@ async def readiness_command(interaction: discord.Interaction, date_str: Optional
     try:
         oura = get_oura_client()
 
-        if date_str:
-            target_date = date.fromisoformat(date_str)
-        else:
-            target_date = date.today()
+        # 日付パース（デフォルトは今日）
+        target_date = parse_date(date_str, date.today()) if date_str else date.today()
 
         readiness_data = oura.get_readiness(target_date)
 
@@ -144,7 +208,7 @@ async def readiness_command(interaction: discord.Interaction, date_str: Optional
 
 
 @bot.tree.command(name="activity", description="活動データを表示します")
-@app_commands.describe(date_str="日付（YYYY-MM-DD形式、省略時は今日）")
+@app_commands.describe(date_str="日付（例: 今日, 昨日, 1/1, 01-02）省略時は今日")
 async def activity_command(interaction: discord.Interaction, date_str: Optional[str] = None):
     """活動データを表示"""
     await interaction.response.defer()
@@ -152,10 +216,8 @@ async def activity_command(interaction: discord.Interaction, date_str: Optional[
     try:
         oura = get_oura_client()
 
-        if date_str:
-            target_date = date.fromisoformat(date_str)
-        else:
-            target_date = date.today()
+        # 日付パース（デフォルトは今日）
+        target_date = parse_date(date_str, date.today()) if date_str else date.today()
 
         activity_data = oura.get_activity(target_date)
 
