@@ -18,6 +18,7 @@ Oura Ring 4のデータをDiscordに毎日通知するアプリケーション�
 - Readiness（準備度）に応じた「今日の方針」を提案
 - 歩数が目標ペースより30%以上遅れている場合のみ昼通知
 - スコアに応じた色分け表示（緑/黄/赤）
+- Discord Bot機能（スラッシュコマンド、自然言語、週/月サマリー、グラフ、リマインダー）
 
 ## セットアップ
 
@@ -36,14 +37,33 @@ Oura Ring 4のデータをDiscordに毎日通知するアプリケーション�
 
 ### 3. GitHub Secretsを設定
 
-リポジトリの Settings > Secrets and variables > Actions で以下を追加:
+#### 方法A: GitHub Web UI
+
+1. リポジトリページを開く
+2. **Settings** タブをクリック
+3. 左メニュー: **Secrets and variables** → **Actions**
+4. **New repository secret** ボタンをクリック
+5. 以下を追加:
 
 | Secret名 | 値 |
 |----------|-----|
 | `OURA_ACCESS_TOKEN` | Ouraのアクセストークン |
 | `DISCORD_WEBHOOK_URL` | DiscordのWebhook URL |
 
-オプションで Variables に追加:
+#### 方法B: GitHub CLI
+
+```bash
+# Secretを設定
+gh secret set OURA_ACCESS_TOKEN --body "トークンの値"
+gh secret set DISCORD_WEBHOOK_URL --body "Webhook URL"
+
+# Secretの一覧を確認（値は見えない）
+gh secret list
+```
+
+#### オプション設定
+
+Variables に追加（任意）:
 
 | Variable名 | 値 | デフォルト |
 |------------|-----|----------|
@@ -59,10 +79,29 @@ Oura Ring 4のデータをDiscordに毎日通知するアプリケーション�
 - 23:30 JST - 夜通知
 
 手動実行する場合：
+
+#### GitHub Web UI
 1. Actions タブを開く
 2. 「Oura Discord Notifier」を選択
 3. 「Run workflow」をクリック
 4. 通知タイプ（morning/noon/night）を選択
+
+#### GitHub CLI
+```bash
+# 通知を手動実行
+gh workflow run notify.yml -f type=morning  # 朝通知
+gh workflow run notify.yml -f type=noon     # 昼通知
+gh workflow run notify.yml -f type=night    # 夜通知
+
+# 実行履歴を確認
+gh run list --limit 5
+
+# 特定の実行のログを見る
+gh run view <RUN_ID> --log
+
+# 失敗したログだけ見る
+gh run view <RUN_ID> --log-failed
+```
 
 ### ローカルで実行
 
@@ -77,6 +116,7 @@ pip install -r requirements.txt
 # 環境変数を設定（.envファイルを作成）
 cp .env.example .env
 # .env を編集してトークンを設定
+# 送信エラーの詳細を見たい場合は DISCORD_WEBHOOK_DEBUG=1 を設定
 
 # 実行
 cd src
@@ -87,6 +127,18 @@ python main.py --type night    # 夜通知
 # テストメッセージを送信
 python main.py --test
 ```
+
+### Discord Botとして利用
+
+1. Discord Developer PortalでBotを作成し、`DISCORD_BOT_TOKEN` を `.env` に設定
+2. Bot設定で「Message Content Intent」を有効化（自然言語対応に必要）
+3. Botを起動
+
+```bash
+python src/bot.py
+```
+
+Botの設定（歩数目標やリマインダー）は `data/settings.json` に保存されます。
 
 ## 通知サンプル
 
@@ -146,6 +198,92 @@ python main.py --test
 
 - Ouraのデータはアプリ経由でクラウドに同期されます。朝起きてすぐアプリを開かないと、9時の通知に最新データが反映されない場合があります。
 - その場合、昼通知で睡眠データが補完されます。
+
+## トラブルシューティング
+
+### 401 Unauthorized エラー（Oura API）
+
+**症状**: `Error: 401 Client Error: Unauthorized for url: https://api.ouraring.com/...`
+
+**原因と対処法**:
+
+| 原因 | 対処法 |
+|------|--------|
+| トークンが無効/Revoke済み | [Oura Cloud](https://cloud.ouraring.com/personal-access-tokens)で新しいトークンを発行 |
+| GitHub Secretsの設定ミス | トークンをコピーし直してSecretsを更新 |
+| Membershipが無効 | Gen3/Ring4はアクティブなOura Membershipが必要 |
+
+**トークンの動作確認**:
+```bash
+# ローカルでAPIテスト
+curl -s "https://api.ouraring.com/v2/usercollection/personal_info" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### Discord送信失敗
+
+**症状**: `Failed to send morning/noon/night report`
+
+**原因と対処法**:
+
+| 原因 | 対処法 |
+|------|--------|
+| Webhook URLが無効 | Discordで新しいWebhookを作成 |
+| GitHub Secretsの設定ミス | URLをコピーし直してSecretsを更新 |
+
+**Webhookの動作確認**:
+```bash
+# ローカルでWebhookテスト
+curl -X POST "YOUR_WEBHOOK_URL" \
+  -H "Content-Type: application/json" \
+  -d '{"content": "テスト"}'
+```
+
+### GitHub Secretsの更新方法
+
+```bash
+# CLIで更新（推奨）
+gh secret set OURA_ACCESS_TOKEN --body "新しいトークン"
+gh secret set DISCORD_WEBHOOK_URL --body "新しいWebhook URL"
+
+# または Web UI から
+# Settings > Secrets and variables > Actions > 該当のSecretを編集
+```
+
+### Oura APIの制限事項
+
+| 項目 | 内容 |
+|------|------|
+| Personal Access Token有効期限 | なし（期限切れにならない） |
+| レート制限 | 5分間に5,000リクエスト |
+| Membership要件 | Gen3/Ring4はアクティブなMembershipが必要 |
+| 廃止予定 | Personal Access Tokenは2025年末に廃止予定 |
+
+## アーキテクチャ
+
+```
+┌──────────────────┐
+│   GitHub         │
+│  ┌────────────┐  │
+│  │ Secrets    │  │  ← トークン/Webhook URLを暗号化保存
+│  │ (暗号化)    │  │
+│  └────────────┘  │
+│        ↓         │
+│  ┌────────────┐  │
+│  │ Actions    │  │  ← 定期実行（09:00, 13:00, 23:30 JST）
+│  │ Runner     │  │
+│  └────────────┘  │
+└────────┬─────────┘
+         │
+    ┌────┴────┐
+    ↓         ↓
+┌────────┐  ┌─────────┐
+│ Oura   │  │ Discord │
+│ API    │  │ Webhook │
+└────────┘  └─────────┘
+```
+
+**ローカルPCは不要** - 全てGitHubのクラウド上で実行されます。
 
 ## ライセンス
 
