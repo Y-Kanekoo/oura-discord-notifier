@@ -14,6 +14,15 @@ DEFAULT_SETTINGS = {
     "steps_goal": 8000,
     "notification_enabled": True,
     "updated_at": None,
+    # リマインダー設定
+    "bedtime_reminder_enabled": False,
+    "bedtime_reminder_time": "22:30",  # HH:MM 形式
+    "bedtime_reminder_channel_id": None,
+    # 目標達成通知設定
+    "goal_notification_enabled": False,
+    "goal_notification_channel_id": None,
+    "goal_achieved_today": False,  # 今日達成済みフラグ
+    "last_goal_check_date": None,
 }
 
 
@@ -71,3 +80,58 @@ class SettingsManager:
     def reset(self) -> None:
         """設定をリセット"""
         self._save(DEFAULT_SETTINGS.copy())
+
+    # リマインダー関連
+    def get_bedtime_reminder(self) -> dict:
+        """就寝リマインダー設定を取得"""
+        data = self._load()
+        return {
+            "enabled": data.get("bedtime_reminder_enabled", False),
+            "time": data.get("bedtime_reminder_time", "22:30"),
+            "channel_id": data.get("bedtime_reminder_channel_id"),
+        }
+
+    def set_bedtime_reminder(self, enabled: bool, time: str = None, channel_id: int = None) -> None:
+        """就寝リマインダー設定を保存"""
+        data = self._load()
+        data["bedtime_reminder_enabled"] = enabled
+        if time:
+            data["bedtime_reminder_time"] = time
+        if channel_id:
+            data["bedtime_reminder_channel_id"] = channel_id
+        self._save(data)
+
+    # 目標達成通知関連
+    def get_goal_notification(self) -> dict:
+        """目標達成通知設定を取得"""
+        data = self._load()
+        return {
+            "enabled": data.get("goal_notification_enabled", False),
+            "channel_id": data.get("goal_notification_channel_id"),
+            "achieved_today": data.get("goal_achieved_today", False),
+            "last_check_date": data.get("last_goal_check_date"),
+        }
+
+    def set_goal_notification(self, enabled: bool, channel_id: int = None) -> None:
+        """目標達成通知設定を保存"""
+        data = self._load()
+        data["goal_notification_enabled"] = enabled
+        if channel_id:
+            data["goal_notification_channel_id"] = channel_id
+        self._save(data)
+
+    def mark_goal_achieved(self, achieved: bool, check_date: str = None) -> None:
+        """目標達成状態を更新"""
+        data = self._load()
+        data["goal_achieved_today"] = achieved
+        if check_date:
+            data["last_goal_check_date"] = check_date
+        self._save(data)
+
+    def reset_daily_flags(self, current_date: str) -> None:
+        """日付が変わったらフラグをリセット"""
+        data = self._load()
+        if data.get("last_goal_check_date") != current_date:
+            data["goal_achieved_today"] = False
+            data["last_goal_check_date"] = current_date
+            self._save(data)

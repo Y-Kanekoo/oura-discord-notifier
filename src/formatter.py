@@ -1,7 +1,10 @@
 """Message Formatter for Discord - 朝・昼・夜の通知対応"""
 
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from typing import Optional
+
+JST = ZoneInfo("Asia/Tokyo")
 
 
 def get_score_emoji(score: int) -> str:
@@ -67,7 +70,9 @@ def format_time_from_iso(iso_string: str) -> str:
     """ISO形式の時刻から HH:MM 形式を取得"""
     try:
         dt = datetime.fromisoformat(iso_string.replace("Z", "+00:00"))
-        return dt.strftime("%H:%M")
+        if dt.tzinfo is None:
+            return dt.strftime("%H:%M")
+        return dt.astimezone(JST).strftime("%H:%M")
     except (ValueError, AttributeError):
         return "不明"
 
@@ -343,6 +348,8 @@ def format_noon_report(
         hours_since_start = current_hour - 8  # 8時起点
         if hours_since_start < 0:
             hours_since_start = 0
+        elif hours_since_start > active_hours:
+            hours_since_start = active_hours
 
         expected_progress = hours_since_start / active_hours
         expected_steps = int(steps_goal * expected_progress)
