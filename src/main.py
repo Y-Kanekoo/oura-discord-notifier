@@ -187,12 +187,14 @@ def send_night_report() -> bool:
     """夜通知：今日の結果 + 減速リマインダー"""
     oura_token = get_env_var("OURA_ACCESS_TOKEN")
     discord_webhook = get_env_var("DISCORD_WEBHOOK_URL")
+    target_wake_time = os.environ.get("TARGET_WAKE_TIME", "07:00")
 
     oura = OuraClient(oura_token)
     discord = DiscordClient(discord_webhook)
 
     try:
         today = get_jst_today()
+        yesterday = today - timedelta(days=1)
 
         print(f"Fetching night data for {today}...")
 
@@ -201,7 +203,28 @@ def send_night_report() -> bool:
         sleep = oura.get_sleep(today)
         activity = oura.get_activity(today)
 
-        title, sections = format_night_report(readiness, sleep, activity)
+        # 前日データを取得（比較用）
+        print("Fetching previous day data for comparison...")
+        prev_activity = oura.get_activity(yesterday)
+
+        # 週間平均を取得
+        print("Fetching weekly averages...")
+        weekly_averages = None
+        try:
+            weekly_data = oura.get_weekly_data(yesterday)
+            if weekly_data and weekly_data.get("averages"):
+                weekly_averages = weekly_data["averages"]
+        except Exception as e:
+            print(f"Warning: Could not fetch weekly data: {e}")
+
+        title, sections = format_night_report(
+            readiness,
+            sleep,
+            activity,
+            prev_activity,
+            weekly_averages,
+            target_wake_time,
+        )
 
         print("Sending night report to Discord...")
         success = discord.send_health_report(title, sections)

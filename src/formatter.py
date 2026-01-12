@@ -64,6 +64,42 @@ def format_weekly_trend(current: int, weekly_avg: Optional[float]) -> str:
     return f"\n{trend}（平均: {weekly_avg:.0f}）"
 
 
+def calculate_target_bedtime(
+    target_wake_time: str = "07:00",
+    sleep_hours: float = 7.5,
+    wind_down_minutes: int = 30,
+) -> str:
+    """
+    目標就寝時刻を計算
+
+    Args:
+        target_wake_time: 目標起床時刻（HH:MM形式）
+        sleep_hours: 目標睡眠時間（時間）
+        wind_down_minutes: 入眠までの時間（分）
+
+    Returns:
+        目標就寝時刻（HH:MM形式）
+    """
+    try:
+        wake_hour, wake_min = map(int, target_wake_time.split(":"))
+        total_minutes = wake_hour * 60 + wake_min
+
+        # 睡眠時間と入眠時間を引く
+        sleep_minutes = int(sleep_hours * 60)
+        bedtime_minutes = total_minutes - sleep_minutes - wind_down_minutes
+
+        # 24時間を超える場合は前日として計算
+        if bedtime_minutes < 0:
+            bedtime_minutes += 24 * 60
+
+        bed_hour = bedtime_minutes // 60
+        bed_min = bedtime_minutes % 60
+
+        return f"{bed_hour:02d}:{bed_min:02d}"
+    except (ValueError, AttributeError):
+        return "23:00"
+
+
 def format_duration(seconds: int) -> str:
     """秒を「X時間Y分」形式に変換"""
     hours = seconds // 3600
@@ -503,9 +539,15 @@ def format_night_report(
     readiness_data: Optional[dict],
     sleep_data: Optional[dict],
     activity_data: Optional[dict] = None,
+    prev_activity: Optional[dict] = None,
+    weekly_averages: Optional[dict] = None,
+    target_wake_time: str = "07:00",
 ) -> tuple[str, list[dict]]:
     """
     夜通知：今日の結果 + 減速リマインダー（データ連動）
+
+    Args:
+        target_wake_time: 目標起床時刻（HH:MM形式）
 
     Returns:
         tuple: (タイトル, セクションリスト)
@@ -523,9 +565,19 @@ def format_night_report(
         active_calories = activity_data.get("active_calories", 0)
         activity_score = activity_data.get("score", 0)
 
+        # 前日比較
+        prev_activity_score = prev_activity.get("score") if prev_activity else None
+        comparison = format_comparison(activity_score, prev_activity_score) if prev_activity_score else ""
+
+        # 週間トレンド
+        weekly_avg_activity = weekly_averages.get("activity") if weekly_averages else None
+        trend = ""
+        if weekly_avg_activity is not None:
+            trend = format_weekly_trend(activity_score, weekly_avg_activity)
+
         sections.append({
             "title": ":bar_chart: 今日の結果",
-            "description": f"**活動スコア: {activity_score}** {get_score_emoji(activity_score)}",
+            "description": f"**活動スコア: {activity_score}** {get_score_emoji(activity_score)}{comparison}{trend}",
             "color": 0x3498DB,  # 青
             "fields": [
                 {
@@ -546,15 +598,20 @@ def format_night_report(
             ],
         })
 
+    # 目標就寝時刻を計算
+    target_bedtime = calculate_target_bedtime(target_wake_time, sleep_hours=7.5)
+
     # 減速リマインダーセクション
     if readiness_score < 70 or sleep_score < 70:
+        # 疲れている時は早めに（+30分早く）
+        early_bedtime = calculate_target_bedtime(target_wake_time, sleep_hours=8.0)
         reminder_desc = (
             ":warning: **今日は早めに就寝を推奨**\n"
             f"Readiness: {readiness_score} / 昨夜の睡眠: {sleep_score}\n\n"
             "**:crescent_moon: 今すぐやること**\n"
             ":one: スマホ・PCをオフ\n"
             ":two: 照明を暗くする\n"
-            ":three: 目標就寝: **24:00**"
+            f":three: 目標就寝: **{early_bedtime}**（8時間睡眠）"
         )
         reminder_color = 0xFF6B6B  # 赤っぽい
     else:
@@ -563,7 +620,7 @@ def format_night_report(
             "**:crescent_moon: 減速開始のルーティン**\n"
             ":one: スマホ・PCをオフ\n"
             ":two: 照明を暗くする\n"
-            ":three: リラックスタイム"
+            f":three: 目標就寝: **{target_bedtime}**（7.5時間睡眠）"
         )
         reminder_color = 0x9B59B6  # 紫
 
