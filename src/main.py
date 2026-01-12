@@ -66,6 +66,7 @@ def send_morning_report() -> bool:
         # 前日の睡眠データと当日のReadinessを取得
         today = get_jst_today()
         yesterday = today - timedelta(days=1)
+        two_days_ago = today - timedelta(days=2)
 
         print(f"Fetching morning data for {today}...")
 
@@ -84,7 +85,24 @@ def send_morning_report() -> bool:
         if not data["readiness"]:
             data["readiness"] = oura.get_readiness(yesterday)
 
-        title, sections = format_morning_report(data)
+        # 前日データを取得（比較用）
+        print("Fetching previous day data for comparison...")
+        prev_data = {
+            "sleep": oura.get_sleep(yesterday) if data["sleep"] and data["sleep"].get("day") == today.isoformat() else oura.get_sleep(two_days_ago),
+            "readiness": oura.get_readiness(yesterday) if data["readiness"] and data["readiness"].get("day") == today.isoformat() else oura.get_readiness(two_days_ago),
+        }
+
+        # 週間平均を取得
+        print("Fetching weekly averages...")
+        weekly_averages = None
+        try:
+            weekly_data = oura.get_weekly_data(yesterday)
+            if weekly_data and weekly_data.get("averages"):
+                weekly_averages = weekly_data["averages"]
+        except Exception as e:
+            print(f"Warning: Could not fetch weekly data: {e}")
+
+        title, sections = format_morning_report(data, prev_data, weekly_averages)
 
         print("Sending morning report to Discord...")
         success = discord.send_health_report(title, sections)

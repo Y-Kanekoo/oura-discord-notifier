@@ -29,6 +29,41 @@ def get_score_label(score: int) -> str:
         return "要注意"
 
 
+def get_comparison_emoji(current: int, previous: int, threshold: int = 3) -> str:
+    """前日比較の絵文字を返す"""
+    diff = current - previous
+    if diff > threshold:
+        return ":arrow_up:"
+    elif diff < -threshold:
+        return ":arrow_down:"
+    else:
+        return ":arrow_right:"
+
+
+def format_comparison(current: int, previous: Optional[int], label: str = "") -> str:
+    """前日比較の文字列を生成"""
+    if previous is None:
+        return ""
+    diff = current - previous
+    emoji = get_comparison_emoji(current, previous)
+    sign = "+" if diff > 0 else ""
+    return f" {emoji} ({sign}{diff})"
+
+
+def format_weekly_trend(current: int, weekly_avg: Optional[float]) -> str:
+    """週間平均との比較文字列を生成"""
+    if weekly_avg is None:
+        return ""
+    diff = current - weekly_avg
+    if diff > 5:
+        trend = ":chart_with_upwards_trend: 週平均より高め"
+    elif diff < -5:
+        trend = ":chart_with_downwards_trend: 週平均より低め"
+    else:
+        trend = ":left_right_arrow: 週平均並み"
+    return f"\n{trend}（平均: {weekly_avg:.0f}）"
+
+
 def format_duration(seconds: int) -> str:
     """秒を「X時間Y分」形式に変換"""
     hours = seconds // 3600
@@ -77,7 +112,12 @@ def format_time_from_iso(iso_string: str) -> str:
         return "不明"
 
 
-def format_sleep_section(sleep_data: Optional[dict], sleep_details: Optional[dict] = None) -> dict:
+def format_sleep_section(
+    sleep_data: Optional[dict],
+    sleep_details: Optional[dict] = None,
+    prev_sleep: Optional[dict] = None,
+    weekly_avg_sleep: Optional[float] = None,
+) -> dict:
     """睡眠データをEmbed用セクションに変換"""
     if not sleep_data:
         return {
@@ -87,6 +127,7 @@ def format_sleep_section(sleep_data: Optional[dict], sleep_details: Optional[dic
         }
 
     score = sleep_data.get("score", 0)
+    prev_score = prev_sleep.get("score") if prev_sleep else None
     sleep_date = sleep_data.get("day", "")
     date_label = ""
     if sleep_date:
@@ -96,7 +137,13 @@ def format_sleep_section(sleep_data: Optional[dict], sleep_details: Optional[dic
         except (ValueError, AttributeError):
             pass
 
-    description = f"**スコア: {score}** {get_score_emoji(score)} ({get_score_label(score)})"
+    # 前日比較を追加
+    comparison = format_comparison(score, prev_score) if prev_score else ""
+    description = f"**スコア: {score}** {get_score_emoji(score)} ({get_score_label(score)}){comparison}"
+
+    # 週間トレンドを追加
+    if weekly_avg_sleep is not None:
+        description += format_weekly_trend(score, weekly_avg_sleep)
     fields = []
 
     # 詳細データがある場合は実際の睡眠時間を表示
@@ -163,6 +210,17 @@ def format_sleep_section(sleep_data: Optional[dict], sleep_details: Optional[dic
                 "inline": True,
             })
 
+        # 睡眠効率を計算
+        time_in_bed = sleep_details.get("time_in_bed")
+        if total_sleep_duration and time_in_bed and time_in_bed > 0:
+            efficiency = (total_sleep_duration / time_in_bed) * 100
+            efficiency_emoji = ":star:" if efficiency >= 85 else ":ok:" if efficiency >= 75 else ":warning:"
+            fields.append({
+                "name": f"{efficiency_emoji} 睡眠効率",
+                "value": f"{efficiency:.0f}%",
+                "inline": True,
+            })
+
     # スコアに応じた色
     if score >= 85:
         color = 0x00FF00
@@ -179,7 +237,11 @@ def format_sleep_section(sleep_data: Optional[dict], sleep_details: Optional[dic
     }
 
 
-def format_readiness_section(readiness_data: Optional[dict]) -> dict:
+def format_readiness_section(
+    readiness_data: Optional[dict],
+    prev_readiness: Optional[dict] = None,
+    weekly_avg_readiness: Optional[float] = None,
+) -> dict:
     """Readinessデータをembed用セクションに変換"""
     if not readiness_data:
         return {
@@ -189,8 +251,16 @@ def format_readiness_section(readiness_data: Optional[dict]) -> dict:
         }
 
     score = readiness_data.get("score", 0)
+    prev_score = prev_readiness.get("score") if prev_readiness else None
     contributors = readiness_data.get("contributors", {})
-    description = f"**スコア: {score}** {get_score_emoji(score)} ({get_score_label(score)})"
+
+    # 前日比較を追加
+    comparison = format_comparison(score, prev_score) if prev_score else ""
+    description = f"**スコア: {score}** {get_score_emoji(score)} ({get_score_label(score)}){comparison}"
+
+    # 週間トレンドを追加
+    if weekly_avg_readiness is not None:
+        description += format_weekly_trend(score, weekly_avg_readiness)
     fields = []
 
     recovery_index = contributors.get("recovery_index")
@@ -243,7 +313,11 @@ def format_policy_section(readiness_score: int) -> dict:
     }
 
 
-def format_morning_report(data: dict) -> tuple[str, list[dict]]:
+def format_morning_report(
+    data: dict,
+    prev_data: Optional[dict] = None,
+    weekly_averages: Optional[dict] = None,
+) -> tuple[str, list[dict]]:
     """朝通知：睡眠 + Readiness + 今日の方針（活動なし）"""
     date_str = data.get("date", "不明")
     title = f":sunrise: **おはようございます！** ({date_str})"
@@ -251,9 +325,26 @@ def format_morning_report(data: dict) -> tuple[str, list[dict]]:
     readiness = data.get("readiness")
     readiness_score = readiness.get("score", 70) if readiness else 70
 
+    # 前日データを取得
+    prev_sleep = prev_data.get("sleep") if prev_data else None
+    prev_readiness = prev_data.get("readiness") if prev_data else None
+
+    # 週間平均を取得
+    weekly_avg_sleep = weekly_averages.get("sleep") if weekly_averages else None
+    weekly_avg_readiness = weekly_averages.get("readiness") if weekly_averages else None
+
     sections = [
-        format_sleep_section(data.get("sleep"), data.get("sleep_details")),
-        format_readiness_section(readiness),
+        format_sleep_section(
+            data.get("sleep"),
+            data.get("sleep_details"),
+            prev_sleep,
+            weekly_avg_sleep,
+        ),
+        format_readiness_section(
+            readiness,
+            prev_readiness,
+            weekly_avg_readiness,
+        ),
         format_policy_section(readiness_score),
     ]
 
