@@ -74,6 +74,7 @@ jobs:
           OURA_ACCESS_TOKEN: ${{ secrets.OURA_ACCESS_TOKEN }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           DAILY_STEPS_GOAL: ${{ vars.DAILY_STEPS_GOAL || '8000' }}
+          TARGET_WAKE_TIME: ${{ vars.TARGET_WAKE_TIME || '07:00' }}
           TZ: Asia/Tokyo
         run: |
           cd src
