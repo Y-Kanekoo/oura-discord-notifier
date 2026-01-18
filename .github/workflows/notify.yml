@@ -2,8 +2,8 @@ name: Oura Discord Notifier
 
 on:
   schedule:
-    # 朝通知: 09:00 JST = 00:00 UTC
-    - cron: '0 0 * * *'
+    # 朝通知: 07:30 JST = 22:30 UTC (実際は08:30-09:00頃に届く想定)
+    - cron: '30 22 * * *'
     # 昼通知: 13:00 JST = 04:00 UTC
     - cron: '0 4 * * *'
     # 夜通知: 23:30 JST = 14:30 UTC
@@ -54,7 +54,7 @@ jobs:
             # スケジュール実行時はcron式から判定
             CRON="${{ github.event.schedule }}"
             case "$CRON" in
-              "0 0 * * *")
+              "30 22 * * *")
                 echo "type=morning" >> $GITHUB_OUTPUT
                 ;;
               "0 4 * * *")
