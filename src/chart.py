@@ -2,6 +2,7 @@
 
 import io
 import os
+import platform
 from datetime import date, datetime
 from pathlib import Path
 from typing import List, Optional
@@ -20,8 +21,20 @@ import matplotlib.dates as mdates
 from matplotlib.figure import Figure
 
 
-# 日本語フォント設定（macOS）
-plt.rcParams['font.family'] = ['Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'sans-serif']
+def _get_japanese_font_families() -> list[str]:
+    """OSに応じた日本語フォントファミリーのリストを返す"""
+    system = platform.system()
+    if system == "Darwin":
+        return ["Hiragino Sans", "Hiragino Kaku Gothic ProN", "sans-serif"]
+    elif system == "Linux":
+        return ["Noto Sans CJK JP", "IPAGothic", "sans-serif"]
+    elif system == "Windows":
+        return ["Yu Gothic", "MS Gothic", "Meiryo", "sans-serif"]
+    return ["sans-serif"]
+
+
+# 日本語フォント設定（クロスプラットフォーム対応）
+plt.rcParams['font.family'] = _get_japanese_font_families()
 plt.rcParams['axes.unicode_minus'] = False
 
 
