@@ -56,6 +56,15 @@ class OuraClient:
         url = f"{self.BASE_URL}/{endpoint}"
         return self._request(url, params)
 
+    def _get_range(self, endpoint: str, start_date: date, end_date: date) -> list[dict]:
+        """指定期間のデータを一括取得し、data配列を返す"""
+        params = {
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+        }
+        data = self._get(endpoint, params)
+        return data.get("data", [])
+
     def get_sleep(self, target_date: Optional[date] = None) -> Optional[dict]:
         """睡眠データを取得（日次サマリー）"""
         if target_date is None:
@@ -203,27 +212,34 @@ class OuraClient:
         data = self._get("workout", params)
         return data.get("data", [])
 
-    def get_weekly_data(self, end_date: Optional[date] = None) -> dict:
-        """過去7日間のデータを取得"""
-        if end_date is None:
-            end_date = date.today()
-        start_date = end_date - timedelta(days=6)
+    def _build_period_data(self, start_date: date, end_date: date) -> dict:
+        """指定期間のsleep/readiness/activityデータを一括取得して整形する"""
+        # 3エンドポイントを各1回ずつ呼び出し（ループ呼び出しの代わり）
+        sleep_list = self._get_range("daily_sleep", start_date, end_date)
+        readiness_list = self._get_range("daily_readiness", start_date, end_date)
+        activity_list = self._get_range("daily_activity", start_date, end_date)
 
-        # 各日のデータを収集
-        sleep_scores = []
-        readiness_scores = []
-        activity_scores = []
-        steps_list = []
-        daily_data = []
+        # dayフィールドでインデックス化
+        sleep_by_day = {item["day"]: item for item in sleep_list if "day" in item}
+        readiness_by_day = {item["day"]: item for item in readiness_list if "day" in item}
+        activity_by_day = {item["day"]: item for item in activity_list if "day" in item}
+
+        # 日別データを構築
+        sleep_scores: list[int] = []
+        readiness_scores: list[int] = []
+        activity_scores: list[int] = []
+        steps_list: list[int] = []
+        daily_data: list[dict] = []
 
         current = start_date
         while current <= end_date:
-            sleep = self.get_sleep(current)
-            readiness = self.get_readiness(current)
-            activity = self.get_activity(current)
+            day_str = current.isoformat()
+            sleep = sleep_by_day.get(day_str)
+            readiness = readiness_by_day.get(day_str)
+            activity = activity_by_day.get(day_str)
 
             day_data = {
-                "date": current.isoformat(),
+                "date": day_str,
                 "sleep_score": sleep.get("score") if sleep else None,
                 "readiness_score": readiness.get("score") if readiness else None,
                 "activity_score": activity.get("score") if activity else None,
@@ -247,6 +263,28 @@ class OuraClient:
             "start_date": start_date.isoformat(),
             "end_date": end_date.isoformat(),
             "daily_data": daily_data,
+            "sleep_scores": sleep_scores,
+            "readiness_scores": readiness_scores,
+            "activity_scores": activity_scores,
+            "steps_list": steps_list,
+        }
+
+    def get_weekly_data(self, end_date: Optional[date] = None) -> dict:
+        """過去7日間のデータを取得"""
+        if end_date is None:
+            end_date = date.today()
+        start_date = end_date - timedelta(days=6)
+
+        period = self._build_period_data(start_date, end_date)
+        sleep_scores = period["sleep_scores"]
+        readiness_scores = period["readiness_scores"]
+        activity_scores = period["activity_scores"]
+        steps_list = period["steps_list"]
+
+        return {
+            "start_date": period["start_date"],
+            "end_date": period["end_date"],
+            "daily_data": period["daily_data"],
             "averages": {
                 "sleep": sum(sleep_scores) / len(sleep_scores) if sleep_scores else None,
                 "readiness": sum(readiness_scores) / len(readiness_scores) if readiness_scores else None,
@@ -282,41 +320,12 @@ class OuraClient:
             end_date = date.today()
         start_date = end_date - timedelta(days=days - 1)
 
-        # 各日のデータを収集
-        sleep_scores = []
-        readiness_scores = []
-        activity_scores = []
-        steps_list = []
-        daily_data = []
+        period = self._build_period_data(start_date, end_date)
+        sleep_scores = period["sleep_scores"]
+        readiness_scores = period["readiness_scores"]
+        activity_scores = period["activity_scores"]
+        steps_list = period["steps_list"]
 
-        current = start_date
-        while current <= end_date:
-            sleep = self.get_sleep(current)
-            readiness = self.get_readiness(current)
-            activity = self.get_activity(current)
-
-            day_data = {
-                "date": current.isoformat(),
-                "sleep_score": sleep.get("score") if sleep else None,
-                "readiness_score": readiness.get("score") if readiness else None,
-                "activity_score": activity.get("score") if activity else None,
-                "steps": activity.get("steps") if activity else None,
-            }
-            daily_data.append(day_data)
-
-            if sleep and sleep.get("score"):
-                sleep_scores.append(sleep["score"])
-            if readiness and readiness.get("score"):
-                readiness_scores.append(readiness["score"])
-            if activity:
-                if activity.get("score"):
-                    activity_scores.append(activity["score"])
-                if activity.get("steps"):
-                    steps_list.append(activity["steps"])
-
-            current += timedelta(days=1)
-
-        # 統計情報
         def calc_stats(scores: list) -> dict:
             if not scores:
                 return {"avg": None, "min": None, "max": None, "count": 0}
@@ -328,10 +337,10 @@ class OuraClient:
             }
 
         return {
-            "start_date": start_date.isoformat(),
-            "end_date": end_date.isoformat(),
+            "start_date": period["start_date"],
+            "end_date": period["end_date"],
             "days": days,
-            "daily_data": daily_data,
+            "daily_data": period["daily_data"],
             "stats": {
                 "sleep": calc_stats(sleep_scores),
                 "readiness": calc_stats(readiness_scores),
