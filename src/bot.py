@@ -1,5 +1,6 @@
 """Discord Bot - 会話型インターフェース"""
 
+import logging
 import os
 import re
 import sys
@@ -38,6 +39,8 @@ from settings import SettingsManager
 from advice import generate_advice
 from chart import generate_score_chart, generate_steps_chart, generate_combined_chart
 
+
+logger = logging.getLogger(__name__)
 
 # ボット設定
 intents = discord.Intents.default()
@@ -1205,8 +1208,7 @@ async def scheduler_loop():
     try:
         settings.reset_daily_flags(today_str)
     except Exception:
-        # 設定ファイルの問題があっても他の処理は続ける
-        pass
+        logger.warning("日次フラグのリセットに失敗しました", exc_info=True)
 
     # 就寝リマインダー
     try:
@@ -1229,9 +1231,9 @@ async def scheduler_loop():
                                 "画面から目を離して、ゆっくり休みましょう。"
                             )
                         except Exception:
-                            pass
+                            logger.warning("就寝リマインダーの送信に失敗しました", exc_info=True)
     except Exception:
-        pass
+        logger.warning("就寝リマインダー処理中にエラーが発生しました", exc_info=True)
 
     # 目標達成通知
     try:
@@ -1252,14 +1254,14 @@ async def scheduler_loop():
                                     f":tada: 今日の歩数目標を達成しました！\n**{steps:,} / {goal:,} 歩** おつかれさまです！"
                                 )
                             except Exception:
-                                pass
+                                logger.warning("目標達成通知の送信に失敗しました", exc_info=True)
                     # 達成フラグを更新
                     try:
                         settings.mark_goal_achieved(True, today_str)
                     except Exception:
-                        pass
+                        logger.warning("目標達成フラグの更新に失敗しました", exc_info=True)
     except Exception:
-        pass
+        logger.warning("目標達成通知処理中にエラーが発生しました", exc_info=True)
 
 
 # =============================================================================
@@ -1318,6 +1320,12 @@ async def on_message(message: discord.Message):
 
 def main():
     """Botを起動"""
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
     token = os.environ.get("DISCORD_BOT_TOKEN")
     if not token:
         print("エラー: DISCORD_BOT_TOKEN が設定されていません")

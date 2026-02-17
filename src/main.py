@@ -1,10 +1,18 @@
 """Oura Ring to Discord Notifier - Main Entry Point"""
 
+import logging
 import os
 import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger(__name__)
 
 # .envファイルの読み込み（存在する場合のみ）
 try:
@@ -119,7 +127,7 @@ def send_morning_report() -> bool:
         try:
             discord.send_message(f":x: **朝通知エラー**\n```{str(e)}```")
         except Exception:
-            pass
+            logger.error("朝通知のエラー通知送信に失敗しました", exc_info=True)
         return False
 
 
@@ -241,7 +249,7 @@ def send_night_report() -> bool:
         try:
             discord.send_message(f":x: **夜通知エラー**\n```{str(e)}```")
         except Exception:
-            pass
+            logger.error("夜通知のエラー通知送信に失敗しました", exc_info=True)
         return False
 
 
