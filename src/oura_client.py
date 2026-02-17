@@ -1,9 +1,12 @@
 """Oura Ring API Client"""
 
+import logging
 import requests
 import time
 from datetime import date, datetime, timedelta
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 
 class OuraClient:
@@ -311,7 +314,7 @@ class OuraClient:
             if data.get("data"):
                 return data["data"][0]
         except Exception:
-            pass
+            logger.warning("ストレスデータの取得に失敗しました", exc_info=True)
         return None
 
     def get_monthly_data(self, end_date: Optional[date] = None, days: int = 30) -> dict:
