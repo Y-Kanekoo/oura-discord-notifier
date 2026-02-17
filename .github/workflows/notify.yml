@@ -40,6 +40,11 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install Japanese fonts
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-cjk
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
