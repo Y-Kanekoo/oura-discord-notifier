@@ -55,13 +55,17 @@ async def on_ready():
 
 
 async def load_extensions():
-    """全Cogを読み込み"""
+    """全Cogを読み込み（失敗時はBot起動を中断）"""
+    failed = []
     for ext in COG_EXTENSIONS:
         try:
             await bot.load_extension(ext)
             logger.info("Cog '%s' を読み込みました", ext)
         except Exception:
             logger.error("Cog '%s' の読み込みに失敗しました", ext, exc_info=True)
+            failed.append(ext)
+    if failed:
+        raise RuntimeError(f"必須Cogの読み込みに失敗しました: {', '.join(failed)}")
 
 
 def main():

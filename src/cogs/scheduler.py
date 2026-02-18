@@ -26,7 +26,7 @@ class SchedulerCog(commands.Cog):
         """Cog読み込み時にスケジューラーを開始"""
         self.scheduler_loop.start()
 
-    async def cog_unload(self):
+    def cog_unload(self):
         """Cog解放時にスケジューラーを停止"""
         self.scheduler_loop.cancel()
 
