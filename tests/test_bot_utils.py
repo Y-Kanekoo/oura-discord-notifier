@@ -1,7 +1,7 @@
 """bot_utils.py のユニットテスト"""
 
-from unittest.mock import patch
 from datetime import date, time
+from unittest.mock import patch
 
 from bot_utils import parse_date, parse_time_str
 

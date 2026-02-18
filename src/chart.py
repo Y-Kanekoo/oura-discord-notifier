@@ -3,9 +3,9 @@
 import io
 import os
 import platform
-from datetime import date, datetime
+from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 config_dir = Path(__file__).parent.parent / "data" / ".matplotlib"
 try:
@@ -14,11 +14,11 @@ try:
 except OSError:
     pass
 
-import matplotlib
+import matplotlib  # noqa: E402
+
 matplotlib.use('Agg')  # GUIバックエンドを使用しない
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-from matplotlib.figure import Figure
+import matplotlib.dates as mdates  # noqa: E402
+import matplotlib.pyplot as plt  # noqa: E402
 
 
 def _get_japanese_font_families() -> list[str]:

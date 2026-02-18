@@ -1,7 +1,7 @@
 """oura_client.py のユニットテスト"""
 
-from unittest.mock import patch, MagicMock
 from datetime import date
+from unittest.mock import MagicMock, patch
 
 from oura_client import OuraClient
 
