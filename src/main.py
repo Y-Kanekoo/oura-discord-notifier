@@ -24,13 +24,13 @@ try:
 except ImportError:
     pass
 
-from oura_client import OuraClient
-from discord_client import DiscordClient
-from formatter import (
+from discord_client import DiscordClient  # noqa: E402
+from formatter import (  # noqa: E402
     format_morning_report,
-    format_noon_report,
     format_night_report,
+    format_noon_report,
 )
+from oura_client import OuraClient  # noqa: E402
 
 # タイムゾーン
 JST = ZoneInfo("Asia/Tokyo")
@@ -167,7 +167,7 @@ def send_noon_report() -> bool:
         )
 
         if not should_send:
-            print(f"No noon notification needed.")
+            print("No noon notification needed.")
             if activity:
                 print(f"  Steps: {activity.get('steps', 0):,} / Goal pace: OK")
             return True

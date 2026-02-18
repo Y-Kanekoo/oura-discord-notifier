@@ -1,21 +1,20 @@
 """formatter.py のユニットテスト"""
 
-import pytest
 from formatter import (
+    calculate_target_bedtime,
+    format_comparison,
+    format_duration,
+    format_morning_report,
+    format_night_report,
+    format_noon_report,
+    format_readiness_section,
+    format_sleep_section,
+    format_time_from_iso,
+    format_weekly_trend,
+    get_comparison_emoji,
     get_score_emoji,
     get_score_label,
-    get_comparison_emoji,
-    format_comparison,
-    format_weekly_trend,
-    format_duration,
-    format_time_from_iso,
-    calculate_target_bedtime,
     get_today_policy,
-    format_morning_report,
-    format_noon_report,
-    format_night_report,
-    format_sleep_section,
-    format_readiness_section,
 )
 
 

@@ -1,10 +1,11 @@
 """Oura Ring API Client"""
 
 import logging
-import requests
 import time
 from datetime import date, datetime, timedelta
 from typing import Optional
+
+import requests
 
 logger = logging.getLogger(__name__)
 

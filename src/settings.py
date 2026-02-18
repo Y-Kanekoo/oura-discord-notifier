@@ -1,10 +1,9 @@
 """設定管理モジュール - JSON永続化"""
 
 import json
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 from typing import Any
-
 
 # 設定ファイルパス
 SETTINGS_FILE = Path(__file__).parent.parent / "data" / "settings.json"

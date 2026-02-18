@@ -2,16 +2,16 @@
 
 import logging
 from datetime import time
+
 from discord.ext import commands, tasks
 
 from bot_utils import (
-    get_oura_client,
     get_jst_now,
     get_jst_today,
+    get_oura_client,
     parse_time_str,
     settings,
 )
-
 
 logger = logging.getLogger(__name__)
 

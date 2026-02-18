@@ -1,26 +1,25 @@
 """ヘルプ・自然言語対応"""
 
 import re
+
 import discord
 from discord.ext import commands
-from typing import List
 
+from advice import generate_advice
 from bot_utils import (
-    get_oura_client,
-    get_jst_today,
     create_embed_from_section,
+    get_jst_today,
+    get_oura_client,
     settings,
 )
 from formatter import (
-    format_sleep_section,
-    format_readiness_section,
     format_morning_report,
-    format_noon_report,
     format_night_report,
+    format_noon_report,
+    format_readiness_section,
+    format_sleep_section,
     get_score_emoji,
 )
-from advice import generate_advice
-
 
 # パターン定義
 PATTERNS = [
