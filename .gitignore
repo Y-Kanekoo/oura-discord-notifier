@@ -47,3 +47,6 @@ htmlcov/
 
 # Bot settings data
 data/
+
+# Claude Code
+.claude/settings.local.json
