@@ -3,6 +3,8 @@
 from datetime import date, time
 from unittest.mock import patch
 
+import pytest
+
 from bot_utils import parse_date, parse_time_str
 
 
@@ -55,6 +57,68 @@ class TestParseDate:
         default = date(2026, 1, 1)
         assert parse_date("", default) == default
         assert parse_date(None, default) == default
+
+
+class TestParseDateEdgeCases:
+    """parse_dateのエッジケーステスト"""
+
+    @patch("bot_utils.get_jst_today", return_value=date(2026, 2, 18))
+    def test_invalid_month_zero(self, mock_today):
+        """月が0の場合"""
+        with pytest.raises(ValueError, match="月は1〜12"):
+            parse_date("0/15")
+
+    @patch("bot_utils.get_jst_today", return_value=date(2026, 2, 18))
+    def test_invalid_month_13(self, mock_today):
+        """月が13の場合"""
+        with pytest.raises(ValueError, match="月は1〜12"):
+            parse_date("13/1")
+
+    @patch("bot_utils.get_jst_today", return_value=date(2026, 2, 18))
+    def test_invalid_day_zero(self, mock_today):
+        """日が0の場合"""
+        with pytest.raises(ValueError, match="日は1〜31"):
+            parse_date("1/0")
+
+    @patch("bot_utils.get_jst_today", return_value=date(2026, 2, 18))
+    def test_invalid_day_32(self, mock_today):
+        """日が32の場合"""
+        with pytest.raises(ValueError, match="日は1〜31"):
+            parse_date("1-32")
+
+    @patch("bot_utils.get_jst_today", return_value=date(2026, 2, 18))
+    def test_invalid_month_japanese(self, mock_today):
+        """日本語形式で月が0の場合"""
+        with pytest.raises(ValueError, match="月は1〜12"):
+            parse_date("0月15日")
+
+    @patch("bot_utils.get_jst_today", return_value=date(2026, 2, 18))
+    def test_invalid_mmdd_format(self, mock_today):
+        """MMDD形式で月が00の場合"""
+        with pytest.raises(ValueError, match="月は1〜12"):
+            parse_date("0015")
+
+    def test_invalid_iso_format(self):
+        """不正なISO形式の場合"""
+        with pytest.raises(ValueError):
+            parse_date("not-a-date")
+
+    @patch("bot_utils.get_jst_today", return_value=date(2026, 2, 18))
+    def test_whitespace_handling(self, mock_today):
+        """前後の空白を無視する"""
+        assert parse_date("  今日  ") == date(2026, 2, 18)
+
+    @patch("bot_utils.get_jst_today", return_value=date(2026, 2, 18))
+    def test_case_insensitive(self, mock_today):
+        """大文字小文字を区別しない"""
+        assert parse_date("TODAY") == date(2026, 2, 18)
+        assert parse_date("Yesterday") == date(2026, 2, 17)
+
+    @patch("bot_utils.get_jst_today", return_value=date(2026, 2, 18))
+    def test_feb_30_raises(self, mock_today):
+        """2月30日は存在しないのでエラー"""
+        with pytest.raises(ValueError):
+            parse_date("2/30")
 
 
 class TestParseTimeStr:

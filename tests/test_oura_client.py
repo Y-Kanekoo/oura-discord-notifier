@@ -91,6 +91,106 @@ class TestOuraClientGetRange:
         assert result == []
 
 
+class TestOuraClientGetSleepRange:
+    def setup_method(self):
+        self.client = OuraClient("test_token")
+
+    @patch("oura_client.requests.get")
+    def test_get_sleep_range_returns_dict_by_day(self, mock_get):
+        """get_sleep_rangeが日付→データの辞書を返す"""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": [
+                {"score": 80, "day": "2026-02-15"},
+                {"score": 85, "day": "2026-02-16"},
+            ]
+        }
+        mock_get.return_value = mock_response
+
+        result = self.client.get_sleep_range(date(2026, 2, 15), date(2026, 2, 16))
+        assert isinstance(result, dict)
+        assert "2026-02-15" in result
+        assert "2026-02-16" in result
+        assert result["2026-02-15"]["score"] == 80
+
+    @patch("oura_client.requests.get")
+    def test_get_sleep_range_empty(self, mock_get):
+        """データがない場合は空辞書を返す"""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": []}
+        mock_get.return_value = mock_response
+
+        result = self.client.get_sleep_range(date(2026, 2, 15), date(2026, 2, 16))
+        assert result == {}
+
+    @patch("oura_client.requests.get")
+    def test_get_sleep_range_missing_day_key(self, mock_get):
+        """dayキーがないデータはスキップされる"""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": [
+                {"score": 80, "day": "2026-02-15"},
+                {"score": 85},  # dayキーなし
+            ]
+        }
+        mock_get.return_value = mock_response
+
+        result = self.client.get_sleep_range(date(2026, 2, 15), date(2026, 2, 16))
+        assert len(result) == 1
+        assert "2026-02-15" in result
+
+
+class TestOuraClientGetSleepDetailsRange:
+    def setup_method(self):
+        self.client = OuraClient("test_token")
+
+    @patch("oura_client.requests.get")
+    def test_long_sleep_prioritized(self, mock_get):
+        """long_sleepタイプが優先される"""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": [
+                {"day": "2026-02-15", "type": "rest", "total_sleep_duration": 1800},
+                {"day": "2026-02-15", "type": "long_sleep", "total_sleep_duration": 25200},
+            ]
+        }
+        mock_get.return_value = mock_response
+
+        result = self.client.get_sleep_details_range(date(2026, 2, 15), date(2026, 2, 15))
+        assert result["2026-02-15"]["type"] == "long_sleep"
+        assert result["2026-02-15"]["total_sleep_duration"] == 25200
+
+    @patch("oura_client.requests.get")
+    def test_empty_data(self, mock_get):
+        """データがない場合は空辞書"""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": []}
+        mock_get.return_value = mock_response
+
+        result = self.client.get_sleep_details_range(date(2026, 2, 15), date(2026, 2, 16))
+        assert result == {}
+
+    @patch("oura_client.requests.get")
+    def test_start_date_offset(self, mock_get):
+        """開始日が1日前にオフセットされることを確認"""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": []}
+        mock_get.return_value = mock_response
+
+        self.client.get_sleep_details_range(date(2026, 2, 15), date(2026, 2, 16))
+
+        # パラメータにstart_dateが1日前であることを確認
+        call_args = mock_get.call_args
+        params = call_args[1].get("params", call_args[0][1] if len(call_args[0]) > 1 else {})
+        assert params.get("start_date") == "2026-02-14"
+
+
 class TestOuraClientGetSleep:
     def setup_method(self):
         self.client = OuraClient("test_token")
