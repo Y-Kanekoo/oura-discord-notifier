@@ -6,6 +6,8 @@ import sys
 from datetime import timedelta
 from pathlib import Path
 
+import requests
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -99,7 +101,7 @@ def send_morning_report() -> bool:
             weekly_data = oura.get_weekly_data(yesterday)
             if weekly_data and weekly_data.get("averages"):
                 weekly_averages = weekly_data["averages"]
-        except Exception as e:
+        except requests.RequestException as e:
             logger.warning("週間データの取得に失敗: %s", e)
 
         title, sections = format_morning_report(data, prev_data, weekly_averages)
@@ -114,8 +116,15 @@ def send_morning_report() -> bool:
 
         return success
 
+    except requests.RequestException as e:
+        logger.error("朝通知のAPI通信エラー: %s", e)
+        try:
+            discord.send_message(f":x: **朝通知エラー（通信）**\n```{str(e)}```")
+        except requests.RequestException:
+            logger.error("朝通知のエラー通知送信にも失敗しました", exc_info=True)
+        return False
     except Exception as e:
-        logger.error("朝通知でエラーが発生: %s", e, exc_info=True)
+        logger.error("朝通知で予期しないエラー: %s", e, exc_info=True)
         try:
             discord.send_message(f":x: **朝通知エラー**\n```{str(e)}```")
         except Exception:
@@ -174,8 +183,15 @@ def send_noon_report() -> bool:
 
         return success
 
+    except requests.RequestException as e:
+        logger.error("昼通知のAPI通信エラー: %s", e)
+        try:
+            discord.send_message(f":x: **昼通知エラー（通信）**\n```{str(e)}```")
+        except requests.RequestException:
+            logger.error("昼通知のエラー通知送信にも失敗しました", exc_info=True)
+        return False
     except Exception as e:
-        logger.error("昼通知でエラーが発生: %s", e, exc_info=True)
+        logger.error("昼通知で予期しないエラー: %s", e, exc_info=True)
         try:
             discord.send_message(f":x: **昼通知エラー**\n```{str(e)}```")
         except Exception:
@@ -218,7 +234,7 @@ def send_night_report() -> bool:
             weekly_data = oura.get_weekly_data(yesterday)
             if weekly_data and weekly_data.get("averages"):
                 weekly_averages = weekly_data["averages"]
-        except Exception as e:
+        except requests.RequestException as e:
             logger.warning("週間データの取得に失敗: %s", e)
 
         title, sections = format_night_report(
@@ -240,8 +256,14 @@ def send_night_report() -> bool:
 
         return success
 
+    except requests.RequestException as e:
+        logger.error("夜通知のAPI通信エラー: %s", e)
+        try:
+            discord.send_message(f":x: **夜通知エラー（通信）**\n```{str(e)}```")
+        except requests.RequestException:
+            logger.error("夜通知のエラー通知送信にも失敗しました", exc_info=True)
     except Exception as e:
-        logger.error("夜通知でエラーが発生: %s", e, exc_info=True)
+        logger.error("夜通知で予期しないエラー: %s", e, exc_info=True)
         try:
             discord.send_message(f":x: **夜通知エラー**\n```{str(e)}```")
         except Exception:

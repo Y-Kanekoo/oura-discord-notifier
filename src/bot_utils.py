@@ -13,8 +13,32 @@ from settings import SettingsManager
 
 JST = ZoneInfo("Asia/Tokyo")
 
-# 共有インスタンス
-settings = SettingsManager()
+# 共有インスタンス（遅延初期化）
+_settings: Optional[SettingsManager] = None
+
+
+def get_settings() -> SettingsManager:
+    """SettingsManagerのシングルトン取得"""
+    global _settings
+    if _settings is None:
+        _settings = SettingsManager()
+    return _settings
+
+
+def set_settings(instance: SettingsManager) -> None:
+    """SettingsManagerを差し替える（テスト用）"""
+    global _settings
+    _settings = instance
+
+
+class _SettingsProxy:
+    """後方互換のためのプロキシ。bot_utils.settings.xxx を get_settings().xxx に委譲する"""
+
+    def __getattr__(self, name: str):
+        return getattr(get_settings(), name)
+
+
+settings = _SettingsProxy()
 
 # OuraClient インスタンス（遅延初期化）
 _oura_client: Optional[OuraClient] = None
