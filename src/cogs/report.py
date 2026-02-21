@@ -1,7 +1,7 @@
 """レポート・分析コマンド"""
 
 from datetime import date, timedelta
-from typing import List, Optional
+from typing import Optional
 
 import discord
 from discord import app_commands
@@ -147,7 +147,7 @@ class ReportCog(commands.Cog):
             title = f":calendar: 週間サマリー ({start_date.strftime('%-m/%-d')} ~ {end_date_parsed.strftime('%-m/%-d')})"
 
             # 日別サマリー
-            lines: List[str] = []
+            lines: list[str] = []
             for day in weekly["daily_data"]:
                 d = date.fromisoformat(day["date"])
                 sleep_score = day.get("sleep_score")
@@ -171,7 +171,7 @@ class ReportCog(commands.Cog):
             averages = weekly.get("averages", {})
             totals = weekly.get("totals", {})
 
-            desc_lines: List[str] = []
+            desc_lines: list[str] = []
             if averages.get("sleep") is not None:
                 desc_lines.append(f"睡眠スコア平均: {averages['sleep']:.1f}")
             if averages.get("readiness") is not None:
@@ -198,7 +198,7 @@ class ReportCog(commands.Cog):
 
             # 先週比
             prev_avg = prev_weekly.get("averages", {}) if prev_weekly else {}
-            trend_lines: List[str] = []
+            trend_lines: list[str] = []
             for key, label in (
                 ("sleep", "睡眠"),
                 ("readiness", "Readiness"),

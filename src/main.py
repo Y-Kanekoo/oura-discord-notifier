@@ -3,9 +3,8 @@
 import logging
 import os
 import sys
-from datetime import date, datetime, timedelta
+from datetime import timedelta
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
 logging.basicConfig(
     level=logging.INFO,
@@ -24,6 +23,7 @@ try:
 except ImportError:
     pass
 
+from bot_utils import get_jst_now, get_jst_today  # noqa: E402
 from discord_client import DiscordClient  # noqa: E402
 from formatter import (  # noqa: E402
     format_morning_report,
@@ -31,9 +31,6 @@ from formatter import (  # noqa: E402
     format_noon_report,
 )
 from oura_client import OuraClient  # noqa: E402
-
-# タイムゾーン
-JST = ZoneInfo("Asia/Tokyo")
 
 # デフォルト設定
 DEFAULT_STEPS_GOAL = 8000
@@ -48,14 +45,9 @@ def get_env_var(name: str, default: str | None = None) -> str:
     return value
 
 
-def get_jst_today() -> date:
-    """JSTの今日の日付を取得"""
-    return datetime.now(JST).date()
-
-
 def get_jst_hour() -> int:
     """JSTの現在時刻（時）を取得"""
-    return datetime.now(JST).hour
+    return get_jst_now().hour
 
 
 # =============================================================================
@@ -184,6 +176,10 @@ def send_noon_report() -> bool:
 
     except Exception as e:
         print(f"Error: {e}")
+        try:
+            discord.send_message(f":x: **昼通知エラー**\n```{str(e)}```")
+        except Exception:
+            logger.error("昼通知のエラー通知送信に失敗しました", exc_info=True)
         return False
 
 

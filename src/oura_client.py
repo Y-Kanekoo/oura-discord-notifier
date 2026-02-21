@@ -31,7 +31,6 @@ class OuraClient:
 
     def _request(self, url: str, params: Optional[dict] = None) -> dict:
         """APIリクエストを実行（リトライ付き）"""
-        last_exc: Optional[Exception] = None
         for attempt in range(1, self.max_retries + 1):
             try:
                 response = requests.get(
@@ -45,15 +44,11 @@ class OuraClient:
                     continue
                 response.raise_for_status()
                 return response.json()
-            except requests.RequestException as exc:
-                last_exc = exc
+            except requests.RequestException:
                 if attempt < self.max_retries:
                     time.sleep(self.retry_backoff * attempt)
                     continue
                 raise
-        if last_exc:
-            raise last_exc
-        return {}
 
     def _get(self, endpoint: str, params: Optional[dict] = None) -> dict:
         """APIリクエストを実行"""
@@ -68,6 +63,34 @@ class OuraClient:
         }
         data = self._get(endpoint, params)
         return data.get("data", [])
+
+    def get_sleep_range(self, start_date: date, end_date: date) -> dict[str, dict]:
+        """指定期間の睡眠サマリーを取得（日付文字列→データの辞書）"""
+        items = self._get_range("daily_sleep", start_date, end_date)
+        return {item["day"]: item for item in items if "day" in item}
+
+    def get_sleep_details_range(self, start_date: date, end_date: date) -> dict[str, dict]:
+        """指定期間の睡眠詳細データを取得（日付文字列→データの辞書）
+
+        日付ごとにlong_sleepを優先して返す。
+        """
+        # 睡眠は前夜に開始するため、1日前から取得
+        params = {
+            "start_date": (start_date - timedelta(days=1)).isoformat(),
+            "end_date": end_date.isoformat(),
+        }
+        data = self._get("sleep", params)
+        items = data.get("data", [])
+
+        # 日付ごとにlong_sleepを優先してグループ化
+        result: dict[str, dict] = {}
+        for item in items:
+            day = item.get("day")
+            if not day:
+                continue
+            if day not in result or item.get("type") == "long_sleep":
+                result[day] = item
+        return result
 
     def get_sleep(self, target_date: Optional[date] = None) -> Optional[dict]:
         """睡眠データを取得（日次サマリー）"""

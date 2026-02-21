@@ -5,7 +5,6 @@ import os
 import platform
 from datetime import datetime
 from pathlib import Path
-from typing import List
 
 config_dir = Path(__file__).parent.parent / "data" / ".matplotlib"
 try:
@@ -39,7 +38,7 @@ plt.rcParams['axes.unicode_minus'] = False
 
 
 def generate_score_chart(
-    daily_data: List[dict],
+    daily_data: list[dict],
     title: str = "スコア推移",
     show_sleep: bool = True,
     show_readiness: bool = True,
@@ -133,7 +132,7 @@ def generate_score_chart(
 
 
 def generate_steps_chart(
-    daily_data: List[dict],
+    daily_data: list[dict],
     goal: int = 8000,
     title: str = "歩数推移",
 ) -> io.BytesIO:
@@ -212,7 +211,7 @@ def generate_steps_chart(
 
 
 def generate_combined_chart(
-    daily_data: List[dict],
+    daily_data: list[dict],
     goal: int = 8000,
     title: str = "月間サマリー",
 ) -> io.BytesIO:

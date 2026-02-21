@@ -633,27 +633,3 @@ def format_night_report(
     return title, sections
 
 
-# =============================================================================
-# 後方互換性のための関数
-# =============================================================================
-
-def format_daily_report(data: dict) -> tuple[str, list[dict]]:
-    """後方互換性：format_morning_reportのエイリアス"""
-    return format_morning_report(data)
-
-
-def format_alert_message(data: dict) -> Optional[str]:
-    """警告メッセージを生成（低スコアの場合のみ）"""
-    alerts = []
-
-    sleep = data.get("sleep")
-    if sleep and sleep.get("score", 100) < 70:
-        alerts.append(f":warning: 睡眠スコアが低めです（{sleep['score']}）。今日は早めに休みましょう。")
-
-    readiness = data.get("readiness")
-    if readiness and readiness.get("score", 100) < 65:
-        alerts.append(f":warning: Readinessが低めです（{readiness['score']}）。無理せず過ごしましょう。")
-
-    if alerts:
-        return "\n".join(alerts)
-    return None

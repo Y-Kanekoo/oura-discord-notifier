@@ -30,6 +30,7 @@ class SettingsManager:
 
     def __init__(self, file_path: Path = SETTINGS_FILE):
         self.file_path = file_path
+        self._cache: dict | None = None
         self._ensure_file()
 
     def _ensure_file(self) -> None:
@@ -40,18 +41,22 @@ class SettingsManager:
             self._save(DEFAULT_SETTINGS.copy())
 
     def _load(self) -> dict:
-        """設定を読み込み"""
+        """設定を読み込み（キャッシュがあればディスクI/Oをスキップ）"""
+        if self._cache is not None:
+            return self._cache.copy()
         try:
             with open(self.file_path, "r", encoding="utf-8") as f:
-                return json.load(f)
+                self._cache = json.load(f)
+                return self._cache.copy()
         except (json.JSONDecodeError, FileNotFoundError):
             return DEFAULT_SETTINGS.copy()
 
     def _save(self, data: dict) -> None:
-        """設定を保存"""
+        """設定を保存（キャッシュも更新）"""
         data["updated_at"] = datetime.now().isoformat()
         with open(self.file_path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
+        self._cache = data.copy()
 
     def get(self, key: str, default: Any = None) -> Any:
         """設定値を取得"""

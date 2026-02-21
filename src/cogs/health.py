@@ -41,14 +41,20 @@ class HealthCog(commands.Cog):
         try:
             oura = get_oura_client()
 
-            # 数字のみの場合は複数日表示
+            # 数字のみの場合は複数日表示（一括取得で API 呼び出しを削減）
             if date_str and date_str.isdigit():
                 days = min(int(date_str), 7)  # 最大7日
+                end_date = get_jst_today() - timedelta(days=1)
+                start_date = get_jst_today() - timedelta(days=days)
+                sleep_map = oura.get_sleep_range(start_date, end_date)
+                details_map = oura.get_sleep_details_range(start_date, end_date)
+
                 embeds = []
                 for i in range(days):
                     target_date = get_jst_today() - timedelta(days=i + 1)
-                    sleep_data = oura.get_sleep(target_date)
-                    sleep_details = oura.get_sleep_details(target_date)
+                    date_key = target_date.isoformat()
+                    sleep_data = sleep_map.get(date_key)
+                    sleep_details = details_map.get(date_key)
                     if sleep_data:
                         section = format_sleep_section(sleep_data, sleep_details)
                         embeds.append(create_embed_from_section(section))
