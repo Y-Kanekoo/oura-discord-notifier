@@ -19,7 +19,7 @@ try:
     env_path = Path(__file__).parent.parent / ".env"
     if env_path.exists():
         load_dotenv(env_path)
-        print(f"Loaded .env from {env_path}")
+        logger.info(".envファイルを読み込みました: %s", env_path)
 except ImportError:
     pass
 
@@ -40,7 +40,7 @@ def get_env_var(name: str, default: str | None = None) -> str:
     """環境変数を取得"""
     value = os.environ.get(name, default)
     if value is None:
-        print(f"Error: {name} environment variable is not set")
+        logger.error("環境変数 %s が設定されていません", name)
         sys.exit(1)
     return value
 
@@ -68,7 +68,7 @@ def send_morning_report() -> bool:
         yesterday = today - timedelta(days=1)
         two_days_ago = today - timedelta(days=2)
 
-        print(f"Fetching morning data for {today}...")
+        logger.info("朝通知のデータを取得中: %s", today)
 
         data = {
             "sleep": oura.get_sleep(today),  # 当日朝までの睡眠
@@ -86,36 +86,36 @@ def send_morning_report() -> bool:
             data["readiness"] = oura.get_readiness(yesterday)
 
         # 前日データを取得（比較用）
-        print("Fetching previous day data for comparison...")
+        logger.info("前日データを取得中（比較用）")
         prev_data = {
             "sleep": oura.get_sleep(yesterday) if data["sleep"] and data["sleep"].get("day") == today.isoformat() else oura.get_sleep(two_days_ago),
             "readiness": oura.get_readiness(yesterday) if data["readiness"] and data["readiness"].get("day") == today.isoformat() else oura.get_readiness(two_days_ago),
         }
 
         # 週間平均を取得
-        print("Fetching weekly averages...")
+        logger.info("週間平均を取得中")
         weekly_averages = None
         try:
             weekly_data = oura.get_weekly_data(yesterday)
             if weekly_data and weekly_data.get("averages"):
                 weekly_averages = weekly_data["averages"]
         except Exception as e:
-            print(f"Warning: Could not fetch weekly data: {e}")
+            logger.warning("週間データの取得に失敗: %s", e)
 
         title, sections = format_morning_report(data, prev_data, weekly_averages)
 
-        print("Sending morning report to Discord...")
+        logger.info("朝通知をDiscordに送信中")
         success = discord.send_health_report(title, sections)
 
         if success:
-            print("Morning report sent successfully!")
+            logger.info("朝通知の送信に成功しました")
         else:
-            print("Failed to send morning report")
+            logger.error("朝通知の送信に失敗しました")
 
         return success
 
     except Exception as e:
-        print(f"Error: {e}")
+        logger.error("朝通知でエラーが発生: %s", e, exc_info=True)
         try:
             discord.send_message(f":x: **朝通知エラー**\n```{str(e)}```")
         except Exception:
@@ -140,14 +140,14 @@ def send_noon_report() -> bool:
         today = get_jst_today()
         current_hour = get_jst_hour()
 
-        print(f"Fetching noon data for {today} at {current_hour}:00...")
+        logger.info("昼通知のデータを取得中: %s %d:00", today, current_hour)
 
         activity = oura.get_activity(today)
         sleep = oura.get_sleep(today)
         sleep_details = oura.get_sleep_details(today)
 
         if not activity and not sleep:
-            print("No activity or sleep data available yet. Skipping noon notification.")
+            logger.info("活動・睡眠データがまだありません。昼通知をスキップします")
             return True  # データがないのは正常（まだ同期されていない）
 
         title, sections, should_send = format_noon_report(
@@ -159,23 +159,23 @@ def send_noon_report() -> bool:
         )
 
         if not should_send:
-            print("No noon notification needed.")
+            logger.info("昼通知は不要です")
             if activity:
-                print(f"  Steps: {activity.get('steps', 0):,} / Goal pace: OK")
+                logger.info("  歩数: %s / 目標ペース: OK", f"{activity.get('steps', 0):,}")
             return True
 
-        print("Sending noon report to Discord...")
+        logger.info("昼通知をDiscordに送信中")
         success = discord.send_health_report(title, sections)
 
         if success:
-            print("Noon report sent successfully!")
+            logger.info("昼通知の送信に成功しました")
         else:
-            print("Failed to send noon report")
+            logger.error("昼通知の送信に失敗しました")
 
         return success
 
     except Exception as e:
-        print(f"Error: {e}")
+        logger.error("昼通知でエラーが発生: %s", e, exc_info=True)
         try:
             discord.send_message(f":x: **昼通知エラー**\n```{str(e)}```")
         except Exception:
@@ -200,7 +200,7 @@ def send_night_report() -> bool:
         today = get_jst_today()
         yesterday = today - timedelta(days=1)
 
-        print(f"Fetching night data for {today}...")
+        logger.info("夜通知のデータを取得中: %s", today)
 
         # 当日のデータを取得
         readiness = oura.get_readiness(today)
@@ -208,18 +208,18 @@ def send_night_report() -> bool:
         activity = oura.get_activity(today)
 
         # 前日データを取得（比較用）
-        print("Fetching previous day data for comparison...")
+        logger.info("前日データを取得中（比較用）")
         prev_activity = oura.get_activity(yesterday)
 
         # 週間平均を取得
-        print("Fetching weekly averages...")
+        logger.info("週間平均を取得中")
         weekly_averages = None
         try:
             weekly_data = oura.get_weekly_data(yesterday)
             if weekly_data and weekly_data.get("averages"):
                 weekly_averages = weekly_data["averages"]
         except Exception as e:
-            print(f"Warning: Could not fetch weekly data: {e}")
+            logger.warning("週間データの取得に失敗: %s", e)
 
         title, sections = format_night_report(
             readiness,
@@ -230,18 +230,18 @@ def send_night_report() -> bool:
             target_wake_time,
         )
 
-        print("Sending night report to Discord...")
+        logger.info("夜通知をDiscordに送信中")
         success = discord.send_health_report(title, sections)
 
         if success:
-            print("Night report sent successfully!")
+            logger.info("夜通知の送信に成功しました")
         else:
-            print("Failed to send night report")
+            logger.error("夜通知の送信に失敗しました")
 
         return success
 
     except Exception as e:
-        print(f"Error: {e}")
+        logger.error("夜通知でエラーが発生: %s", e, exc_info=True)
         try:
             discord.send_message(f":x: **夜通知エラー**\n```{str(e)}```")
         except Exception:
@@ -280,7 +280,7 @@ def main():
             ":white_check_mark: **テスト成功！**\n"
             "Oura Discord Notifierが正常に動作しています。"
         )
-        print("Test message sent!" if success else "Failed to send test message")
+        logger.info("テストメッセージ送信: %s", "成功" if success else "失敗")
         sys.exit(0 if success else 1)
 
     # 通知タイプに応じて実行
@@ -291,7 +291,7 @@ def main():
     elif args.type == "night":
         success = send_night_report()
     else:
-        print(f"Unknown notification type: {args.type}")
+        logger.error("不明な通知タイプ: %s", args.type)
         success = False
 
     sys.exit(0 if success else 1)

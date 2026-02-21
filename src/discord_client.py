@@ -37,10 +37,13 @@ class DiscordClient:
                 if response.status_code == 429 and attempt < self.max_retries:
                     retry_after = None
                     try:
-                        retry_after = response.json().get("retry_after")
-                    except ValueError:
+                        data = response.json()
+                        raw = data.get("retry_after") if isinstance(data, dict) else None
+                        if isinstance(raw, (int, float)):
+                            retry_after = float(raw)
+                    except (ValueError, KeyError):
                         retry_after = None
-                    time.sleep(float(retry_after) if retry_after else self.retry_backoff * attempt)
+                    time.sleep(retry_after if retry_after else self.retry_backoff * attempt)
                     should_retry = True
                 elif response.status_code in self.RETRY_STATUS_CODES and attempt < self.max_retries:
                     time.sleep(self.retry_backoff * attempt)

@@ -98,7 +98,7 @@ def generate_advice(
                 ":muscle: **活動量が十分です**\n"
                 "今日の運動は順調！休息も大切に。"
             )
-        elif activity_score < 50 and (steps is None or steps / steps_goal < 0.5):
+        elif activity_score < 50 and (steps is None or (steps_goal > 0 and steps / steps_goal < 0.5)):
             advice_parts.append(
                 ":couch_and_lamp: **活動量が少なめ**\n"
                 "デスクワークが多い日？\n"

@@ -87,6 +87,7 @@ def parse_date(date_str: str, default_date: Optional[date] = None) -> date:
     m = re.match(r"(\d{1,2})月(\d{1,2})日?", s)
     if m:
         month, day = int(m.group(1)), int(m.group(2))
+        _validate_month_day(month, day)
         return date(today.year, month, day)
 
     # YYYY-MM-DD または YYYY/MM/DD
@@ -98,16 +99,26 @@ def parse_date(date_str: str, default_date: Optional[date] = None) -> date:
     m = re.match(r"^(\d{1,2})[-/](\d{1,2})$", s)
     if m:
         month, day = int(m.group(1)), int(m.group(2))
+        _validate_month_day(month, day)
         return date(today.year, month, day)
 
     # MMDD (4桁)
     m = re.match(r"^(\d{2})(\d{2})$", s)
     if m:
         month, day = int(m.group(1)), int(m.group(2))
+        _validate_month_day(month, day)
         return date(today.year, month, day)
 
     # ISO形式にフォールバック
     return date.fromisoformat(date_str)
+
+
+def _validate_month_day(month: int, day: int) -> None:
+    """月・日の範囲を検証"""
+    if not (1 <= month <= 12):
+        raise ValueError(f"月は1〜12の範囲で指定してください: {month}")
+    if not (1 <= day <= 31):
+        raise ValueError(f"日は1〜31の範囲で指定してください: {day}")
 
 
 def create_embed_from_section(section: dict) -> discord.Embed:

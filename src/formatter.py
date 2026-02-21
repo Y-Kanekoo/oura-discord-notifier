@@ -174,7 +174,7 @@ def format_sleep_section(
             pass
 
     # 前日比較を追加
-    comparison = format_comparison(score, prev_score) if prev_score else ""
+    comparison = format_comparison(score, prev_score) if prev_score is not None else ""
     description = f"**スコア: {score}** {get_score_emoji(score)} ({get_score_label(score)}){comparison}"
 
     # 週間トレンドを追加
@@ -291,7 +291,7 @@ def format_readiness_section(
     contributors = readiness_data.get("contributors", {})
 
     # 前日比較を追加
-    comparison = format_comparison(score, prev_score) if prev_score else ""
+    comparison = format_comparison(score, prev_score) if prev_score is not None else ""
     description = f"**スコア: {score}** {get_score_emoji(score)} ({get_score_label(score)}){comparison}"
 
     # 週間トレンドを追加
