@@ -1,5 +1,6 @@
 """Bot共通ユーティリティ"""
 
+import asyncio
 import os
 import re
 from datetime import date, time, timedelta
@@ -143,6 +144,18 @@ def _validate_month_day(month: int, day: int) -> None:
         raise ValueError(f"月は1〜12の範囲で指定してください: {month}")
     if not (1 <= day <= 31):
         raise ValueError(f"日は1〜31の範囲で指定してください: {day}")
+
+
+async def run_sync(func, *args, **kwargs):
+    """同期関数をasyncio.to_thread()で非同期実行する
+
+    discord.pyのイベントループをブロックしないよう、
+    requestsベースのAPI呼び出しをラップするために使用する。
+
+    使用例:
+        sleep_data = await run_sync(oura.get_sleep, target_date)
+    """
+    return await asyncio.to_thread(func, *args, **kwargs)
 
 
 def create_embed_from_section(section: dict) -> discord.Embed:

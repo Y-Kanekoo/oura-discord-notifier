@@ -13,6 +13,7 @@ from bot_utils import (
     get_jst_today,
     get_oura_client,
     parse_date,
+    run_sync,
     settings,
 )
 from chart import generate_combined_chart, generate_score_chart, generate_steps_chart
@@ -44,13 +45,13 @@ class ReportCog(commands.Cog):
             oura = get_oura_client()
 
             if report_type == "morning":
-                data = oura.get_all_daily_data(get_jst_today())
+                data = await run_sync(oura.get_all_daily_data, get_jst_today())
                 title, sections = format_morning_report(data)
 
             elif report_type == "noon":
-                activity = oura.get_activity(get_jst_today())
-                sleep = oura.get_sleep(get_jst_today())
-                sleep_details = oura.get_sleep_details(get_jst_today())
+                activity = await run_sync(oura.get_activity, get_jst_today())
+                sleep = await run_sync(oura.get_sleep, get_jst_today())
+                sleep_details = await run_sync(oura.get_sleep_details, get_jst_today())
                 goal = settings.get_steps_goal()
 
                 title, sections, should_send = format_noon_report(
@@ -61,9 +62,9 @@ class ReportCog(commands.Cog):
                     return
 
             elif report_type == "night":
-                readiness = oura.get_readiness(get_jst_today())
-                sleep = oura.get_sleep(get_jst_today())
-                activity = oura.get_activity(get_jst_today())
+                readiness = await run_sync(oura.get_readiness, get_jst_today())
+                sleep = await run_sync(oura.get_sleep, get_jst_today())
+                activity = await run_sync(oura.get_activity, get_jst_today())
                 title, sections = format_night_report(readiness, sleep, activity)
 
             else:
@@ -86,9 +87,9 @@ class ReportCog(commands.Cog):
             oura = get_oura_client()
 
             # 今日のデータを取得
-            readiness = oura.get_readiness(get_jst_today())
-            sleep = oura.get_sleep(get_jst_today())
-            activity = oura.get_activity(get_jst_today())
+            readiness = await run_sync(oura.get_readiness, get_jst_today())
+            sleep = await run_sync(oura.get_sleep, get_jst_today())
+            activity = await run_sync(oura.get_activity, get_jst_today())
 
             readiness_score = readiness.get("score") if readiness else None
             sleep_score = sleep.get("score") if sleep else None
@@ -136,10 +137,10 @@ class ReportCog(commands.Cog):
             oura = get_oura_client()
 
             end_date = parse_date(date_str, get_jst_today()) if date_str else get_jst_today()
-            weekly = oura.get_weekly_data(end_date)
+            weekly = await run_sync(oura.get_weekly_data, end_date)
 
             # 先週分も取得（比較用）
-            prev_weekly = oura.get_weekly_data(end_date - timedelta(days=7))
+            prev_weekly = await run_sync(oura.get_weekly_data, end_date - timedelta(days=7))
 
             start_date = date.fromisoformat(weekly["start_date"])
             end_date_parsed = date.fromisoformat(weekly["end_date"])
@@ -239,7 +240,7 @@ class ReportCog(commands.Cog):
             # 日数制限
             days = max(7, min(days, 90))
 
-            monthly = oura.get_monthly_data(days=days)
+            monthly = await run_sync(oura.get_monthly_data, days=days)
             stats = monthly.get("stats", {})
             totals = monthly.get("totals", {})
 
@@ -339,7 +340,7 @@ class ReportCog(commands.Cog):
             # 日数制限
             days = max(7, min(days, 90))
 
-            monthly = oura.get_monthly_data(days=days)
+            monthly = await run_sync(oura.get_monthly_data, days=days)
             daily_data = monthly.get("daily_data", [])
 
             if not daily_data:

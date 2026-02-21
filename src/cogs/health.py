@@ -12,6 +12,7 @@ from bot_utils import (
     get_jst_today,
     get_oura_client,
     parse_date,
+    run_sync,
     settings,
 )
 from formatter import (
@@ -46,8 +47,8 @@ class HealthCog(commands.Cog):
                 days = min(int(date_str), 7)  # 最大7日
                 end_date = get_jst_today() - timedelta(days=1)
                 start_date = get_jst_today() - timedelta(days=days)
-                sleep_map = oura.get_sleep_range(start_date, end_date)
-                details_map = oura.get_sleep_details_range(start_date, end_date)
+                sleep_map = await run_sync(oura.get_sleep_range, start_date, end_date)
+                details_map = await run_sync(oura.get_sleep_details_range, start_date, end_date)
 
                 embeds = []
                 for i in range(days):
@@ -72,8 +73,8 @@ class HealthCog(commands.Cog):
             default_date = get_jst_today() - timedelta(days=1)
             target_date = parse_date(date_str, default_date) if date_str else default_date
 
-            sleep_data = oura.get_sleep(target_date)
-            sleep_details = oura.get_sleep_details(target_date)
+            sleep_data = await run_sync(oura.get_sleep, target_date)
+            sleep_details = await run_sync(oura.get_sleep_details, target_date)
 
             if not sleep_data:
                 await interaction.followup.send(f":warning: {target_date} の睡眠データがありません")
@@ -101,7 +102,7 @@ class HealthCog(commands.Cog):
             # 日付パース（デフォルトは今日）
             target_date = parse_date(date_str, get_jst_today()) if date_str else get_jst_today()
 
-            readiness_data = oura.get_readiness(target_date)
+            readiness_data = await run_sync(oura.get_readiness, target_date)
 
             if not readiness_data:
                 await interaction.followup.send(f":warning: {target_date} のReadinessデータがありません")
@@ -111,7 +112,7 @@ class HealthCog(commands.Cog):
             embed = create_embed_from_section(section)
 
             # 前夜の睡眠詳細から HRV 情報を取得（あれば表示）
-            sleep_details = oura.get_sleep_details(target_date)
+            sleep_details = await run_sync(oura.get_sleep_details, target_date)
             if sleep_details:
                 average_hrv = sleep_details.get("average_hrv")
                 if average_hrv:
@@ -140,7 +141,7 @@ class HealthCog(commands.Cog):
             # 日付パース（デフォルトは今日）
             target_date = parse_date(date_str, get_jst_today()) if date_str else get_jst_today()
 
-            activity_data = oura.get_activity(target_date)
+            activity_data = await run_sync(oura.get_activity, target_date)
 
             if not activity_data:
                 await interaction.followup.send(f":warning: {target_date} の活動データがありません")
@@ -175,7 +176,7 @@ class HealthCog(commands.Cog):
 
         try:
             oura = get_oura_client()
-            activity_data = oura.get_activity(get_jst_today())
+            activity_data = await run_sync(oura.get_activity, get_jst_today())
 
             if not activity_data:
                 await interaction.followup.send(":warning: 今日の活動データがまだありません")
@@ -217,7 +218,7 @@ class HealthCog(commands.Cog):
             default_date = get_jst_today() - timedelta(days=1)
             target_date = parse_date(date_str, default_date) if date_str else default_date
 
-            sleep_data = oura.get_sleep(target_date)
+            sleep_data = await run_sync(oura.get_sleep, target_date)
             if not sleep_data:
                 await interaction.followup.send(f":warning: {target_date} の睡眠データがありません")
                 return
@@ -259,7 +260,7 @@ class HealthCog(commands.Cog):
             oura = get_oura_client()
             target_date = parse_date(date_str, get_jst_today()) if date_str else get_jst_today()
 
-            workouts = oura.get_workout(target_date)
+            workouts = await run_sync(oura.get_workout, target_date)
             if not workouts:
                 await interaction.followup.send(f":warning: {target_date} のワークアウトデータがありません")
                 return

@@ -10,6 +10,7 @@ from bot_utils import (
     create_embed_from_section,
     get_jst_today,
     get_oura_client,
+    run_sync,
     settings,
 )
 from formatter import (
@@ -169,8 +170,8 @@ class GeneralCog(commands.Cog):
             oura = get_oura_client()
 
             if handler_type == "sleep":
-                sleep_data = oura.get_sleep(get_jst_today())
-                sleep_details = oura.get_sleep_details(get_jst_today())
+                sleep_data = await run_sync(oura.get_sleep, get_jst_today())
+                sleep_details = await run_sync(oura.get_sleep_details, get_jst_today())
                 if not sleep_data:
                     await message.reply(":warning: 睡眠データがありません")
                     return
@@ -179,7 +180,7 @@ class GeneralCog(commands.Cog):
                 await message.reply(embed=embed)
 
             elif handler_type == "readiness":
-                readiness_data = oura.get_readiness(get_jst_today())
+                readiness_data = await run_sync(oura.get_readiness, get_jst_today())
                 if not readiness_data:
                     await message.reply(":warning: Readinessデータがありません")
                     return
@@ -188,7 +189,7 @@ class GeneralCog(commands.Cog):
                 await message.reply(embed=embed)
 
             elif handler_type == "steps":
-                activity = oura.get_activity(get_jst_today())
+                activity = await run_sync(oura.get_activity, get_jst_today())
                 if not activity:
                     await message.reply(":warning: 今日の活動データがまだありません")
                     return
@@ -200,7 +201,7 @@ class GeneralCog(commands.Cog):
                 )
 
             elif handler_type == "activity":
-                activity = oura.get_activity(get_jst_today())
+                activity = await run_sync(oura.get_activity, get_jst_today())
                 if not activity:
                     await message.reply(":warning: 今日の活動データがまだありません")
                     return
@@ -212,15 +213,15 @@ class GeneralCog(commands.Cog):
                 )
 
             elif handler_type == "report_morning":
-                data = oura.get_all_daily_data(get_jst_today())
+                data = await run_sync(oura.get_all_daily_data, get_jst_today())
                 title, sections = format_morning_report(data)
                 embeds = [create_embed_from_section(s) for s in sections]
                 await message.reply(content=title, embeds=embeds)
 
             elif handler_type == "report_noon":
-                activity = oura.get_activity(get_jst_today())
-                sleep = oura.get_sleep(get_jst_today())
-                sleep_details = oura.get_sleep_details(get_jst_today())
+                activity = await run_sync(oura.get_activity, get_jst_today())
+                sleep = await run_sync(oura.get_sleep, get_jst_today())
+                sleep_details = await run_sync(oura.get_sleep_details, get_jst_today())
                 goal = settings.get_steps_goal()
                 title, sections, should_send = format_noon_report(
                     activity, goal, sleep_data=sleep, sleep_details=sleep_details
@@ -232,9 +233,9 @@ class GeneralCog(commands.Cog):
                 await message.reply(content=title, embeds=embeds)
 
             elif handler_type == "report_night":
-                readiness = oura.get_readiness(get_jst_today())
-                sleep = oura.get_sleep(get_jst_today())
-                activity = oura.get_activity(get_jst_today())
+                readiness = await run_sync(oura.get_readiness, get_jst_today())
+                sleep = await run_sync(oura.get_sleep, get_jst_today())
+                activity = await run_sync(oura.get_activity, get_jst_today())
                 title, sections = format_night_report(readiness, sleep, activity)
                 embeds = [create_embed_from_section(s) for s in sections]
                 await message.reply(content=title, embeds=embeds)
@@ -257,9 +258,9 @@ class GeneralCog(commands.Cog):
                     await message.reply(":x: 目標歩数を数字で指定してください")
 
             elif handler_type == "advice":
-                readiness = oura.get_readiness(get_jst_today())
-                sleep = oura.get_sleep(get_jst_today())
-                activity = oura.get_activity(get_jst_today())
+                readiness = await run_sync(oura.get_readiness, get_jst_today())
+                sleep = await run_sync(oura.get_sleep, get_jst_today())
+                activity = await run_sync(oura.get_activity, get_jst_today())
 
                 advice_text = generate_advice(
                     readiness_score=readiness.get("score") if readiness else None,

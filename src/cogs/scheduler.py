@@ -10,6 +10,7 @@ from bot_utils import (
     get_jst_today,
     get_oura_client,
     parse_time_str,
+    run_sync,
     settings,
 )
 
@@ -72,7 +73,7 @@ class SchedulerCog(commands.Cog):
             goal_info = settings.get_goal_notification()
             if goal_info.get("enabled") and not goal_info.get("achieved_today"):
                 oura = get_oura_client()
-                activity = oura.get_activity(get_jst_today())
+                activity = await run_sync(oura.get_activity, get_jst_today())
                 if activity:
                     steps = activity.get("steps", 0)
                     goal = settings.get_steps_goal()
