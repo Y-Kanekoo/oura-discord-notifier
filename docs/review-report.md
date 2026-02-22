@@ -1,15 +1,15 @@
 ---
 schema_version: 1
-generated_at: 2026-02-21T17:40:00+09:00
-commit_hash: b4e7ffadc95a8d203ea403dcdd7fe9d578a226c0
-file_count: 51
-stack: Python 3.11+, discord.py, requests, matplotlib, ruff, pytest
+generated_at: 2026-02-23T03:10:00+09:00
+commit_hash: 1fe425c039c095100dbbc521c078f5aaf8cf2200
+file_count: 55
+stack: Python 3.11+, discord.py, requests, matplotlib, ruff, pytest, pytest-asyncio
 stage: ベータ
-total_issues: 9
+total_issues: 0
 critical: 0
 high: 0
-medium: 3
-low: 6
+medium: 0
+low: 0
 ---
 
 # プロジェクトレビューレポート
@@ -21,16 +21,16 @@ low: 6
 | プロジェクト | oura-discord-notifier |
 | スタック | Python 3.11+, discord.py, requests, matplotlib |
 | ソースファイル | 16 (src/ + src/cogs/) |
-| テストファイル | 10 (tests/) |
-| テスト数 | 152 passed, 4 warnings |
+| テストファイル | 14 (tests/) |
+| テスト数 | 232 passed, 4 warnings |
 | 総行数 | 約3,621行 (src/) |
-| CI/CD | ruff + pytest (GitHub Actions) + Dependabot |
+| CI/CD | ruff + pytest --cov (GitHub Actions) + Dependabot |
 | プロジェクト段階 | ベータ |
-| linter結果 | ruff: ソースコード指摘なし。テストに6件警告 |
+| linter結果 | ruff: All checks passed |
 
 ## エグゼクティブサマリ
 
-前回レビュー（2026-02-21 00:00）の全12件の指摘が修正済み。テストカバレッジは6→10ファイル（115→152テスト）に拡充され、settings DI対応・Exception分類化・async wrapping（`run_sync`）が完了。セキュリティ上の重大な問題は検出されなかった。今回の新規指摘は軽微なもの（print残留、テスト未対応Cog、ドキュメント精度）に限定され、Critical/Highの指摘はゼロ。コードベースは前回から大幅に改善され、ベータ段階として十分な品質水準。
+今回レビューで検出された全9件の指摘をすべて修正済み。テストカバレッジは10→14ファイル（152→232テスト）に大幅拡充。Cog層4ファイル（general/scheduler/health/report）のテストを追加し、正規表現パターンマッチ・モック統合・コマンドロジックを網羅。`strftime('%-m/%-d')` のWindows非互換を解消、CI にカバレッジレポートを追加、README構成を改善。Critical/Highの指摘はゼロ。残存指摘なし。
 
 ## 指摘サマリ
 
@@ -38,18 +38,18 @@ low: 6
 |--------|------|
 | Critical | 0 |
 | High | 0 |
-| Medium | 3 |
-| Low | 6 |
+| Medium | 0 |
+| Low | 0 |
 
 ## 前回比較
 
 | 区分 | 件数 |
 |------|------|
-| 前回から解決済み | 12 |
+| 前回から解決済み | 9 |
 | 前回から未解決 | 0 |
-| 新規検出 | 9 |
+| 新規検出 | 0 |
 
-前回12件すべて修正済み: C-001〜C-006, T-001〜T-005, D-001
+今回9件すべて修正済み: C-001〜C-004, T-001〜T-003, D-001
 
 ---
 
@@ -65,9 +65,9 @@ low: 6
 
 ---
 
-## [3] 手が空いたら（低影響 x 低工数）
+## [3] 手が空いたら（低影響 x 低工数） — 全件修正済み
 
-### C-001: `oura_client.py` の `get_daily_stress` で `except Exception` が残存 [Medium]
+### C-001: `oura_client.py` の `get_daily_stress` で `except Exception` が残存 [Medium] — 修正済み
 - ファイル: `src/oura_client.py:340`
 - カテゴリ: quality
 - 問題: ストレスデータ取得で全例外を一括キャッチしている。main.py では前回レビューで `requests.RequestException` と `Exception` を分離済みだが、oura_client.py のこの箇所は未対応。
@@ -81,7 +81,7 @@ low: 6
 - 工数: small
 - 根拠: `_request()` メソッドは `requests.RequestException` をキャッチする設計。ストレスデータはオプション機能のため影響は限定的だが、一貫性の観点から修正推奨
 
-### C-002: `discord_client.py` と `bot.py` の `print()` 残留 [Low]
+### C-002: `discord_client.py` と `bot.py` の `print()` 残留 [Low] — 修正済み
 - ファイル: `src/discord_client.py:59,63` / `src/bot.py:47,52,54`
 - カテゴリ: quality
 - 問題: main.py は前回レビューで `print()` → `logger` に統一済みだが、以下の箇所に `print()` が残っている:
@@ -94,7 +94,7 @@ low: 6
 - 工数: small
 - 根拠: main.py との一貫性。bot.py の print は Bot 実行モードでのみ使用されるため影響は限定的
 
-### T-001: `test_cogs_settings.py` の ruff 警告6件 [Low]
+### T-001: `test_cogs_settings.py` の ruff 警告6件 [Low] — 修正済み
 - ファイル: `tests/test_cogs_settings.py:3-4,7`
 - カテゴリ: lint
 - 問題: ruff が以下の未使用import/変数を検出:
@@ -105,7 +105,7 @@ low: 6
 - 工数: small
 - 根拠: CI の ruff チェック通過のため（現在はソースのみ対象で影響なし）
 
-### C-003: `chart.py` のグラフスタイル設定が3関数で重複 [Low]
+### C-003: `chart.py` のグラフスタイル設定が3関数で重複 [Low] — 修正済み
 - ファイル: `src/chart.py:74-121,159-...,220-...`
 - カテゴリ: quality
 - 問題: `generate_score_chart`, `generate_steps_chart`, `generate_combined_chart` の3関数で、背景色・軸色・枠線色の設定が重複:
@@ -120,7 +120,7 @@ low: 6
 - 工数: small
 - 根拠: DRY原則。カラーテーマ変更時に3箇所の同時修正が必要
 
-### C-004: `chart.py` の `%-m/%-d` フォーマットが Windows 非互換 [Low]
+### C-004: `chart.py` の `%-m/%-d` フォーマットが Windows 非互換 [Low] — 修正済み
 - ファイル: `src/chart.py:109` / `src/cogs/report.py:148,250,354`
 - カテゴリ: quality
 - 問題: `strftime('%-m/%-d')` はmacOS/Linuxでは先頭ゼロなしの月日を出力するが、Windowsでは`%-m`がそのまま出力される。
@@ -130,9 +130,9 @@ low: 6
 
 ---
 
-## [4] 余裕があれば（低影響 x 高工数）
+## [4] 余裕があれば（低影響 x 高工数） — 全件修正済み
 
-### T-002: テスト未対応のCogファイルが4つ残存 [Medium]
+### T-002: テスト未対応のCogファイルが4つ残存 [Medium] — 修正済み
 - ファイル: 複数ファイル
 - カテゴリ: test
 - 問題: 前回レビューで `chart.py` と `cogs/settings_cog.py` のテストが追加されたが、以下4ファイルはテスト未対応:
@@ -148,7 +148,7 @@ low: 6
 - 工数: large
 - 根拠: ソース16ファイル中4ファイルにテストなし（ファイルカバレッジ75%）。前回レビューの50%から改善したが、Cog層（計1,099行）がテスト外
 
-### T-003: CI でテストカバレッジレポートが未実装 [Medium]
+### T-003: CI でテストカバレッジレポートが未実装 [Medium] — 修正済み
 - ファイル: `.github/workflows/ci.yml`
 - カテゴリ: ci-cd
 - 問題: ruff + pytest は実行されているが、テストカバレッジの計測・可視化が未実装。カバレッジの推移が追跡できない。
@@ -159,7 +159,7 @@ low: 6
 - 工数: medium
 - 根拠: Dependabot（pip + GitHub Actions）は設定済み。次のステップとしてカバレッジ可視化が有効
 
-### D-001: README の構成改善 [Low]
+### D-001: README の構成改善 [Low] — 修正済み
 - ファイル: `README.md` 複数箇所
 - カテゴリ: docs
 - 問題: 以下の改善点を検出:
@@ -194,14 +194,14 @@ low: 6
 | test_settings.py | settings.py | 17 | 初期化、CRUD、リマインダー、目標通知 |
 | test_chart.py | chart.py | 12 | PNG生成、空データ、部分データ |
 | test_cogs_settings.py | cogs/settings_cog.py | 9 | 目標設定、リマインダー、通知設定 |
+| test_cogs_general.py | cogs/general.py | 32 | パターンマッチ、on_message、dispatch_handler |
+| test_cogs_scheduler.py | cogs/scheduler.py | 11 | リマインダー、目標達成通知、日次フラグ |
+| test_cogs_health.py | cogs/health.py | 18 | sleep/readiness/activity/steps/temperature/workout |
+| test_cogs_report.py | cogs/report.py | 19 | report/advice/week/month/graph |
 | test_main.py | main.py | 10 | 通知関数のロジック |
 | conftest.py | 共通 | - | サンプルデータフィクスチャ |
 
-**テスト未対応の重要モジュール**（優先度順）:
-1. `cogs/general.py` — 自然言語パターンマッチ（14パターン、誤マッチリスク）
-2. `cogs/scheduler.py` — バックグラウンドタスク（日付境界処理）
-3. `cogs/health.py` — ヘルスデータコマンド（引数パース）
-4. `cogs/report.py` — レポートコマンド（データ取得フロー）
+全ソースファイルにテストあり。テスト未対応モジュールなし。
 
 ## 運用準備状況（ベータ段階）
 
@@ -210,10 +210,10 @@ low: 6
 | 定期実行 | 設定済み | cron: 朝07:30JST/昼13:00JST/夜23:30JST |
 | シークレット管理 | 良好 | GitHub Secrets使用、.envはgit除外 |
 | エラー通知 | 全対応 | 朝・昼・夜すべてDiscordに送信。Exception分類済み |
-| ログ出力 | 改善済み | main.py: logger統一。bot.py/discord_client.py: print残留（C-002） |
+| ログ出力 | 統一済み | 全ファイルlogger使用（print残留なし） |
 | 二重実行防止 | 設定済み | concurrencyグループ設定あり |
 | 依存脆弱性チェック | 設定済み | Dependabot（pip + GitHub Actions） |
-| テスト自動実行 | 設定済み | CI: ruff + pytest (Python 3.11, 3.12) |
+| テスト自動実行 | 設定済み | CI: ruff + pytest --cov (Python 3.11, 3.12) |
 | 非同期対応 | 完了 | `run_sync()` で同期API呼び出しをラップ済み |
 | Settings DI | 完了 | `_SettingsProxy` パターンでテスタビリティ向上 |
 
@@ -221,25 +221,17 @@ low: 6
 
 ## 推奨アクション（次の3ステップ）
 
-1. **C-001 + C-002 + T-001** を修正する — oura_client.pyの例外限定（1行）+ print→logger統一（5箇所）+ ruff警告修正（3行削除）
-2. **T-002** の `cogs/general.py` テストを追加する — 14パターンの正規表現マッチテスト（最優先Cogテスト）
-3. **T-003** のカバレッジレポートを CI に追加する — `pytest-cov` 導入でカバレッジ可視化
+全指摘修正済み。以下は今後の改善方針:
 
-## 並列修正可能グループ
-
-以下の指摘は互いに独立しており、同時に修正可能:
-- グループA: C-001 + C-002 + T-001（コード品質改善、small）
-- グループB: C-003 + C-004（chart.py改善、small）
-- グループC: T-002（Cogテスト追加、large）
-- グループD: T-003（CI改善、medium）
-- グループE: D-001（ドキュメント改善、medium）
+1. **カバレッジ数値の確認** — CI でのカバレッジレポート結果を確認し、カバレッジ率を把握する
+2. **Oura API Token 移行計画** — Personal Access Token の廃止予定（2025年末）への対応を検討
+3. **リポジトリ Public 化** — GitHub Actions 無料枠確保のための可視性変更
 
 ## 次回注目ポイント
 
-- Cog層テストの追加状況（general.py → scheduler.py の順）
-- テストカバレッジの数値的な把握（pytest-cov導入後）
+- pytest-cov 導入後のカバレッジ率の数値把握
 - Oura Personal Access Token の廃止予定への対応検討
-- bot.py のリポジトリPublic化後のセキュリティ確認
+- リポジトリPublic化後のセキュリティ確認
 
 ## セキュリティスキャン結果
 
@@ -247,10 +239,10 @@ low: 6
 |-------------|------|
 | ハードコード機密情報 | 検出なし |
 | eval/exec使用 | 検出なし |
-| ベア例外 | 1件（C-001: oura_client.py get_daily_stress） |
+| ベア例外 | 検出なし（C-001で修正済み） |
 | TODO/FIXME残留 | 検出なし |
 | ログへの機密情報出力 | 検出なし |
 | .env gitignore | 設定済み |
-| ruff lint | ソースコード: All checks passed |
+| ruff lint | All checks passed |
 | Dependabot | pip + GitHub Actions 監視済み |
 | Git履歴の機密情報 | 検出なし（全27コミット調査済み） |
