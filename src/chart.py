@@ -36,6 +36,30 @@ def _get_japanese_font_families() -> list[str]:
 plt.rcParams['font.family'] = _get_japanese_font_families()
 plt.rcParams['axes.unicode_minus'] = False
 
+# Discordダークテーマの配色定数
+_BG_COLOR = '#2C2F33'
+_LEGEND_BG = '#23272A'
+
+
+def _setup_chart_style(fig, *axes):
+    """Discordダークテーマ用のスタイルを設定"""
+    fig.patch.set_facecolor(_BG_COLOR)
+    for ax in axes:
+        ax.set_facecolor(_BG_COLOR)
+        ax.tick_params(colors='white')
+        for spine in ax.spines.values():
+            spine.set_color('white')
+
+
+def _save_chart(fig) -> io.BytesIO:
+    """グラフをPNGバイトストリームとして保存"""
+    plt.tight_layout()
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png', dpi=150, facecolor=fig.get_facecolor())
+    buf.seek(0)
+    plt.close(fig)
+    return buf
+
 
 def generate_score_chart(
     daily_data: list[dict],
@@ -72,8 +96,7 @@ def generate_score_chart(
 
     # グラフ作成
     fig, ax = plt.subplots(figsize=(12, 6))
-    fig.patch.set_facecolor('#2C2F33')  # Discordダークテーマに合わせる
-    ax.set_facecolor('#2C2F33')
+    _setup_chart_style(fig, ax)
 
     # 各スコアをプロット
     if show_sleep:
@@ -105,7 +128,6 @@ def generate_score_chart(
     ax.set_title(title, color='white', fontsize=14, fontweight='bold')
 
     # 目盛りの設定
-    ax.tick_params(colors='white')
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%-m/%-d'))
     ax.xaxis.set_major_locator(mdates.DayLocator(interval=max(1, len(dates) // 10)))
     plt.xticks(rotation=45)
@@ -114,21 +136,9 @@ def generate_score_chart(
     ax.grid(True, alpha=0.3, color='white')
 
     # 凡例
-    ax.legend(loc='upper left', facecolor='#23272A', edgecolor='white', labelcolor='white')
+    ax.legend(loc='upper left', facecolor=_LEGEND_BG, edgecolor='white', labelcolor='white')
 
-    # 枠線の色
-    for spine in ax.spines.values():
-        spine.set_color('white')
-
-    plt.tight_layout()
-
-    # バイトストリームに保存
-    buf = io.BytesIO()
-    fig.savefig(buf, format='png', dpi=150, facecolor=fig.get_facecolor())
-    buf.seek(0)
-    plt.close(fig)
-
-    return buf
+    return _save_chart(fig)
 
 
 def generate_steps_chart(
@@ -158,8 +168,7 @@ def generate_steps_chart(
 
     # グラフ作成
     fig, ax = plt.subplots(figsize=(12, 6))
-    fig.patch.set_facecolor('#2C2F33')
-    ax.set_facecolor('#2C2F33')
+    _setup_chart_style(fig, ax)
 
     # 有効なデータのみ抽出
     valid_dates = [d for d, s in zip(dates, steps_list) if s is not None]
@@ -181,7 +190,6 @@ def generate_steps_chart(
     ax.set_title(title, color='white', fontsize=14, fontweight='bold')
 
     # 目盛りの設定
-    ax.tick_params(colors='white')
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%-m/%-d'))
     ax.xaxis.set_major_locator(mdates.DayLocator(interval=max(1, len(dates) // 10)))
     plt.xticks(rotation=45)
@@ -193,21 +201,9 @@ def generate_steps_chart(
     ax.grid(True, alpha=0.3, color='white', axis='y')
 
     # 凡例
-    ax.legend(loc='upper right', facecolor='#23272A', edgecolor='white', labelcolor='white')
+    ax.legend(loc='upper right', facecolor=_LEGEND_BG, edgecolor='white', labelcolor='white')
 
-    # 枠線の色
-    for spine in ax.spines.values():
-        spine.set_color('white')
-
-    plt.tight_layout()
-
-    # バイトストリームに保存
-    buf = io.BytesIO()
-    fig.savefig(buf, format='png', dpi=150, facecolor=fig.get_facecolor())
-    buf.seek(0)
-    plt.close(fig)
-
-    return buf
+    return _save_chart(fig)
 
 
 def generate_combined_chart(
@@ -241,10 +237,9 @@ def generate_combined_chart(
 
     # グラフ作成（2行構成）
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8), height_ratios=[1, 1])
-    fig.patch.set_facecolor('#2C2F33')
+    _setup_chart_style(fig, ax1, ax2)
 
     # === 上段: スコア推移 ===
-    ax1.set_facecolor('#2C2F33')
 
     # 睡眠スコア
     valid_dates = [d for d, s in zip(dates, sleep_scores) if s is not None]
@@ -263,16 +258,12 @@ def generate_combined_chart(
     ax1.set_ylim(40, 100)
     ax1.set_ylabel('スコア', color='white', fontsize=10)
     ax1.set_title(title, color='white', fontsize=14, fontweight='bold')
-    ax1.tick_params(colors='white')
     ax1.xaxis.set_major_formatter(mdates.DateFormatter('%-m/%-d'))
     ax1.xaxis.set_major_locator(mdates.DayLocator(interval=max(1, len(dates) // 8)))
     ax1.grid(True, alpha=0.3, color='white')
-    ax1.legend(loc='upper left', facecolor='#23272A', edgecolor='white', labelcolor='white', fontsize=9)
-    for spine in ax1.spines.values():
-        spine.set_color('white')
+    ax1.legend(loc='upper left', facecolor=_LEGEND_BG, edgecolor='white', labelcolor='white', fontsize=9)
 
     # === 下段: 歩数推移 ===
-    ax2.set_facecolor('#2C2F33')
 
     valid_dates = [d for d, s in zip(dates, steps_list) if s is not None]
     valid_steps = [s for s in steps_list if s is not None]
@@ -286,22 +277,12 @@ def generate_combined_chart(
     ax2.set_ylim(0, max(max_steps * 1.1, goal * 1.2))
     ax2.set_ylabel('歩数', color='white', fontsize=10)
     ax2.set_xlabel('日付', color='white', fontsize=10)
-    ax2.tick_params(colors='white')
     ax2.xaxis.set_major_formatter(mdates.DateFormatter('%-m/%-d'))
     ax2.xaxis.set_major_locator(mdates.DayLocator(interval=max(1, len(dates) // 8)))
     ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{int(x):,}'))
     ax2.grid(True, alpha=0.3, color='white', axis='y')
-    ax2.legend(loc='upper right', facecolor='#23272A', edgecolor='white', labelcolor='white', fontsize=9)
-    for spine in ax2.spines.values():
-        spine.set_color('white')
+    ax2.legend(loc='upper right', facecolor=_LEGEND_BG, edgecolor='white', labelcolor='white', fontsize=9)
 
     plt.xticks(rotation=45)
-    plt.tight_layout()
 
-    # バイトストリームに保存
-    buf = io.BytesIO()
-    fig.savefig(buf, format='png', dpi=150, facecolor=fig.get_facecolor())
-    buf.seek(0)
-    plt.close(fig)
-
-    return buf
+    return _save_chart(fig)

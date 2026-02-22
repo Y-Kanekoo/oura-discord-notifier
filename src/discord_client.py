@@ -1,10 +1,13 @@
 """Discord Webhook Client"""
 
+import logging
 import os
 import time
 from typing import Optional
 
 import requests
+
+logger = logging.getLogger(__name__)
 
 
 class DiscordClient:
@@ -56,11 +59,11 @@ class DiscordClient:
                     body = response.text.strip()
                     if len(body) > 500:
                         body = body[:500] + "..."
-                    print(f"Discord webhook status={response.status_code} body={body}")
+                    logger.debug("Discord webhook status=%d body=%s", response.status_code, body)
                 return response
             except requests.RequestException:
                 if attempt == self.max_retries and os.environ.get("DISCORD_WEBHOOK_DEBUG"):
-                    print("Discord webhook request failed with RequestException")
+                    logger.debug("Discord webhook request failed with RequestException")
                 if attempt < self.max_retries:
                     time.sleep(self.retry_backoff * attempt)
                     continue

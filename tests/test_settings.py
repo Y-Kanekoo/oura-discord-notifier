@@ -9,7 +9,7 @@ class TestSettingsManagerInit:
     def test_creates_file_on_init(self, tmp_path):
         """初期化時に設定ファイルが作成される"""
         file_path = tmp_path / "data" / "settings.json"
-        manager = SettingsManager(file_path)
+        SettingsManager(file_path)
 
         assert file_path.exists()
         with open(file_path, encoding="utf-8") as f:

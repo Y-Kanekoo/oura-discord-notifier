@@ -1,10 +1,8 @@
 """cogs/settings_cog.py のユニットテスト"""
 
-import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 import discord
-import pytest
 
 from settings import SettingsManager
 
@@ -20,14 +18,14 @@ class TestGoalCommand:
 
     def test_goal_range_lower_bound(self, tmp_path):
         """歩数目標が1000未満は不正"""
-        sm = SettingsManager(tmp_path / "settings.json")
+        SettingsManager(tmp_path / "settings.json")
         # 下限チェック: 999は不正、1000はOK
         assert 999 < 1000  # バリデーション条件の確認
         assert not (1000 < 1000 or 1000 > 100000)
 
     def test_goal_range_upper_bound(self, tmp_path):
         """歩数目標が100000超は不正"""
-        sm = SettingsManager(tmp_path / "settings.json")
+        SettingsManager(tmp_path / "settings.json")
         assert 100001 > 100000  # バリデーション条件の確認
         assert not (100000 < 1000 or 100000 > 100000)
 

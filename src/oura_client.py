@@ -337,7 +337,7 @@ class OuraClient:
             data = self._get("daily_stress", params)
             if data.get("data"):
                 return data["data"][0]
-        except Exception:
+        except requests.RequestException:
             logger.warning("ストレスデータの取得に失敗しました", exc_info=True)
         return None
 

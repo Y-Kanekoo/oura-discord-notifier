@@ -44,14 +44,14 @@ bot = create_bot()
 @bot.event
 async def on_ready():
     """Bot起動時"""
-    print(f"Bot起動完了: {bot.user}")
+    logger.info("Bot起動完了: %s", bot.user)
 
     # スラッシュコマンドを同期
     try:
         synced = await bot.tree.sync()
-        print(f"スラッシュコマンド {len(synced)} 個を同期しました")
+        logger.info("スラッシュコマンド %d 個を同期しました", len(synced))
     except Exception as e:
-        print(f"コマンド同期エラー: {e}")
+        logger.error("コマンド同期エラー: %s", e)
 
 
 async def load_extensions():

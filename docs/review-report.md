@@ -1,14 +1,14 @@
 ---
 schema_version: 1
-generated_at: 2026-02-21T00:00:00+09:00
-commit_hash: b4f13bf62dde1c4941f4a3f20ebb14d690375f32
-file_count: 22
+generated_at: 2026-02-21T17:40:00+09:00
+commit_hash: b4e7ffadc95a8d203ea403dcdd7fe9d578a226c0
+file_count: 51
 stack: Python 3.11+, discord.py, requests, matplotlib, ruff, pytest
 stage: ベータ
-total_issues: 12
+total_issues: 9
 critical: 0
 high: 0
-medium: 6
+medium: 3
 low: 6
 ---
 
@@ -20,17 +20,17 @@ low: 6
 |------|-----|
 | プロジェクト | oura-discord-notifier |
 | スタック | Python 3.11+, discord.py, requests, matplotlib |
-| ソースファイル | 14 (src/) |
-| テストファイル | 6 (tests/) |
-| テスト数 | 115 passed |
-| 総行数 | 約3,544行 (src/) |
+| ソースファイル | 16 (src/ + src/cogs/) |
+| テストファイル | 10 (tests/) |
+| テスト数 | 152 passed, 4 warnings |
+| 総行数 | 約3,621行 (src/) |
 | CI/CD | ruff + pytest (GitHub Actions) + Dependabot |
 | プロジェクト段階 | ベータ |
-| linter結果 | ruff: 指摘なし (All checks passed!) |
+| linter結果 | ruff: ソースコード指摘なし。テストに6件警告 |
 
 ## エグゼクティブサマリ
 
-前回レビュー（2026-02-20）の全11件の指摘が修正済み。テストカバレッジは4→6ファイル（115テスト）に拡充され、Dependabotも導入済み。セキュリティ上の重大な問題は検出されなかった。今回の新規指摘は主に防御的プログラミング（ゼロ除算防止、falsy判定）、ログ出力の統一、および残りのテストカバレッジ拡充に関するもの。コードベースは安定しており、ベータ段階として十分な品質水準。
+前回レビュー（2026-02-21 00:00）の全12件の指摘が修正済み。テストカバレッジは6→10ファイル（115→152テスト）に拡充され、settings DI対応・Exception分類化・async wrapping（`run_sync`）が完了。セキュリティ上の重大な問題は検出されなかった。今回の新規指摘は軽微なもの（print残留、テスト未対応Cog、ドキュメント精度）に限定され、Critical/Highの指摘はゼロ。コードベースは前回から大幅に改善され、ベータ段階として十分な品質水準。
 
 ## 指摘サマリ
 
@@ -38,18 +38,18 @@ low: 6
 |--------|------|
 | Critical | 0 |
 | High | 0 |
-| Medium | 6 |
+| Medium | 3 |
 | Low | 6 |
 
 ## 前回比較
 
 | 区分 | 件数 |
 |------|------|
-| 前回から解決済み | 11 |
+| 前回から解決済み | 12 |
 | 前回から未解決 | 0 |
-| 新規検出 | 12 |
+| 新規検出 | 9 |
 
-前回11件すべて修正済み: C-001〜C-008, D-001, T-001, T-002
+前回12件すべて修正済み: C-001〜C-006, T-001〜T-005, D-001
 
 ---
 
@@ -67,146 +67,109 @@ low: 6
 
 ## [3] 手が空いたら（低影響 x 低工数）
 
-### C-001: `advice.py` のゼロ除算リスク [Medium]
-- ファイル: `src/advice.py:101`
-- カテゴリ: bug
-- 問題: `steps / steps_goal` でゼロ除算の可能性。71行目では `steps_goal > 0` チェック済みだが、101行目は未チェック。
-- 対応: 除算前の防御チェック追加
+### C-001: `oura_client.py` の `get_daily_stress` で `except Exception` が残存 [Medium]
+- ファイル: `src/oura_client.py:340`
+- カテゴリ: quality
+- 問題: ストレスデータ取得で全例外を一括キャッチしている。main.py では前回レビューで `requests.RequestException` と `Exception` を分離済みだが、oura_client.py のこの箇所は未対応。
+- 対応: `except requests.RequestException` に限定
 - 修正案:
 ```diff
--        elif activity_score < 50 and (steps is None or steps / steps_goal < 0.5):
-+        elif activity_score < 50 and (steps is None or (steps_goal > 0 and steps / steps_goal < 0.5)):
+-        except Exception:
++        except requests.RequestException:
+             logger.warning("ストレスデータの取得に失敗しました", exc_info=True)
 ```
 - 工数: small
-- 根拠: `steps_goal` は環境変数経由でデフォルト8000のため実害リスクは低いが、防御的プログラミングとして修正推奨
+- 根拠: `_request()` メソッドは `requests.RequestException` をキャッチする設計。ストレスデータはオプション機能のため影響は限定的だが、一貫性の観点から修正推奨
 
-### C-002: `main.py` の print と logging の混在 [Medium]
-- ファイル: `src/main.py` 複数箇所（22, 71, 89, 96, 107, 118, 143, 150, 167, 203, 211, 233, 244行）
+### C-002: `discord_client.py` と `bot.py` の `print()` 残留 [Low]
+- ファイル: `src/discord_client.py:59,63` / `src/bot.py:47,52,54`
 - カテゴリ: quality
-- 問題: `logging.basicConfig()` でロガー設定済みだが、メイン処理では `print()` を使用。エラーハンドリングのみ `logger.error()` を使用しており不統一。
-- 対応: `print()` を `logger.info()` に統一
+- 問題: main.py は前回レビューで `print()` → `logger` に統一済みだが、以下の箇所に `print()` が残っている:
+  - `discord_client.py:59` — Webhook デバッグ出力（`DISCORD_WEBHOOK_DEBUG` 環境変数制御下）
+  - `discord_client.py:63` — RequestException 時のデバッグ出力
+  - `bot.py:47` — Bot起動完了メッセージ
+  - `bot.py:52` — スラッシュコマンド同期完了
+  - `bot.py:54` — コマンド同期エラー
+- 対応: `logger.info()` / `logger.debug()` に変更
 - 工数: small
-- 根拠: 本番運用（GitHub Actions）では print は stdout に出力されるが、ログレベル制御やフォーマット統一ができない
+- 根拠: main.py との一貫性。bot.py の print は Bot 実行モードでのみ使用されるため影響は限定的
 
-### C-003: `bot_utils.py` の `parse_date()` で日付範囲バリデーションなし [Medium]
-- ファイル: `src/bot_utils.py:87-107`
+### T-001: `test_cogs_settings.py` の ruff 警告6件 [Low]
+- ファイル: `tests/test_cogs_settings.py:3-4,7`
+- カテゴリ: lint
+- 問題: ruff が以下の未使用import/変数を検出:
+  - `import json` — 未使用
+  - `from unittest.mock import AsyncMock, MagicMock, patch` — 一部未使用
+  - `import pytest` — 未使用
+- 対応: 未使用の import を削除
+- 工数: small
+- 根拠: CI の ruff チェック通過のため（現在はソースのみ対象で影響なし）
+
+### C-003: `chart.py` のグラフスタイル設定が3関数で重複 [Low]
+- ファイル: `src/chart.py:74-121,159-...,220-...`
 - カテゴリ: quality
-- 問題: `N月D日` / `MM-DD` / `MMDD` 形式のパースで、月日の範囲チェックなし。`13月32日` のような不正入力は `date()` コンストラクタの `ValueError` に依存。呼び出し元（Cogコマンド）で `ValueError` はキャッチされるが、エラーメッセージが技術的になる。
-- 対応: パース時に範囲チェックを追加し、ユーザーフレンドリーなエラーメッセージを返す
-- 修正案:
-```diff
-     m = re.match(r"(\d{1,2})月(\d{1,2})日?", s)
-     if m:
-         month, day = int(m.group(1)), int(m.group(2))
-+        if not (1 <= month <= 12 and 1 <= day <= 31):
-+            raise ValueError(f"月日の範囲が不正です: {month}月{day}日")
-         return date(today.year, month, day)
-```
+- 問題: `generate_score_chart`, `generate_steps_chart`, `generate_combined_chart` の3関数で、背景色・軸色・枠線色の設定が重複:
+  ```python
+  fig.patch.set_facecolor('#2C2F33')
+  ax.set_facecolor('#2C2F33')
+  ax.tick_params(colors='white')
+  for spine in ax.spines.values():
+      spine.set_color('white')
+  ```
+- 対応: `_setup_chart_style(fig, ax)` ヘルパーに共通化
 - 工数: small
-- 根拠: 同一ファイルの `parse_time_str()` では範囲チェック済み（139-140行）。一貫性の観点
+- 根拠: DRY原則。カラーテーマ変更時に3箇所の同時修正が必要
 
-### C-004: `formatter.py` の `prev_score` falsy チェック [Low]
-- ファイル: `src/formatter.py:177`
+### C-004: `chart.py` の `%-m/%-d` フォーマットが Windows 非互換 [Low]
+- ファイル: `src/chart.py:109` / `src/cogs/report.py:148,250,354`
 - カテゴリ: quality
-- 問題: `if prev_score` は `prev_score == 0` も falsy として扱い、スコア0の前日比較が無視される。
-- 対応: `if prev_score is not None` に変更
-- 修正案:
-```diff
--    comparison = format_comparison(score, prev_score) if prev_score else ""
-+    comparison = format_comparison(score, prev_score) if prev_score is not None else ""
-```
+- 問題: `strftime('%-m/%-d')` はmacOS/Linuxでは先頭ゼロなしの月日を出力するが、Windowsでは`%-m`がそのまま出力される。
+- 対応: 現状は GitHub Actions（Linux）のみで使用するため実害なし。Windows対応が必要になった場合は `f"{dt.month}/{dt.day}"` に変更
 - 工数: small
-- 根拠: Ouraスコアは通常1-100だが、APIが0を返す可能性は排除できない
-
-### C-005: `discord_client.py` の `retry_after` 例外ハンドリング [Low]
-- ファイル: `src/discord_client.py:39-42`
-- カテゴリ: quality
-- 問題: `response.json()` の例外を `ValueError` でキャッチしているが、Python 3.11+では `json.JSONDecodeError`（`ValueError` のサブクラス）がより適切。また `retry_after` の型が保証されていない。
-- 対応: 例外タイプの明確化と型チェック追加
-- 修正案:
-```diff
-+import json
-+
-                     try:
--                        retry_after = response.json().get("retry_after")
--                    except ValueError:
-+                        data = response.json()
-+                        retry_after = data.get("retry_after") if isinstance(data, dict) else None
-+                    except (ValueError, json.JSONDecodeError):
-                         retry_after = None
-```
-- 工数: small
-- 根拠: 防御的プログラミング。Discord APIが予期しないレスポンスを返した場合の安全策
-
-### T-001: `parse_date` のエッジケーステスト不足 [Low]
-- ファイル: `tests/test_bot_utils.py`
-- カテゴリ: test
-- 問題: 年越え（12/31→1/1）、月末（2/29うるう年）、範囲外入力（13月、32日）のテストなし。
-- 対応: parameterize を使いエッジケーステストを追加
-- 工数: small
-- 根拠: 現在13テストケースで基本パターンはカバー済みだが、境界値テストが不足
-
-### T-002: `get_sleep_details_range` のテスト欠落 [Low]
-- ファイル: `tests/test_oura_client.py`
-- カテゴリ: test
-- 問題: 新規追加された `get_sleep_range()` と `get_sleep_details_range()` メソッドのテストがない。
-- 対応: テスト追加（特に `get_sleep_details_range` の日付オフセットロジック検証）
-- 工数: small
-- 根拠: C-008修正で追加されたメソッドだが、テストが追加されていない
-
-### D-001: README のワークフロー時刻記載に曖昧さ [Low]
-- ファイル: `README.md:84`
-- カテゴリ: docs
-- 問題: README で「09:00 JST - 朝通知」と記載されているが、実際の cron 実行は 07:30 JST（到着は08:30-09:00頃）。「09:00」は到着予定時刻であり、実行時刻との区別が曖昧。
-- 対応: 「07:30 JST 実行（到着: 08:30-09:00 JST）」のように明確化
-- 工数: small
-- 根拠: `notify.yml:5-6` のコメントでは明確だが、README のみ読むユーザーに誤解を与える可能性
+- 根拠: 実行環境がLinuxに限定されるため優先度は低い。情報として記録
 
 ---
 
 ## [4] 余裕があれば（低影響 x 高工数）
 
-### T-003: テスト未対応ソースファイルが7つ残存 [Medium]
+### T-002: テスト未対応のCogファイルが4つ残存 [Medium]
 - ファイル: 複数ファイル
 - カテゴリ: test
-- 問題: 前回レビューで `settings.py` と `discord_client.py` のテストが追加されたが、以下7ファイルはテスト未対応:
-  - `chart.py` (307行) — グラフ生成
-  - `bot.py` (96行) — Botエントリポイント
-  - `cogs/health.py` (313行) — ヘルスデータコマンド
-  - `cogs/report.py` (372行) — レポートコマンド
-  - `cogs/scheduler.py` (105行) — スケジューラー
-  - `cogs/settings_cog.py` (160行) — 設定コマンド
-  - `cogs/general.py` (301行) — 汎用コマンド
+- 問題: 前回レビューで `chart.py` と `cogs/settings_cog.py` のテストが追加されたが、以下4ファイルはテスト未対応:
+  - `cogs/general.py` (303行) — 自然言語パターンマッチング（14パターン）
+  - `cogs/scheduler.py` (107行) — バックグラウンドタスク・日付境界処理
+  - `cogs/health.py` (315行) — ヘルスデータコマンド群
+  - `cogs/report.py` (374行) — レポート・分析コマンド群
 - 対応: 優先度順にテストを追加
-  1. `chart.py` — BytesIO出力のPNGヘッダ検証（テスタビリティ高）
-  2. `cogs/health.py` — APIモックで複数日取得ロジック検証
-  3. `cogs/report.py` — フォーマッター連携テスト
+  1. `cogs/general.py` — 正規表現パターンマッチテスト（誤マッチリスク高）
+  2. `cogs/scheduler.py` — 日付境界処理、例外ハンドリングテスト
+  3. `cogs/health.py` — コマンド引数パース、複数日取得ロジック
+  4. `cogs/report.py` — レポート種別ごとのデータ取得テスト
 - 工数: large
-- 根拠: ソース14ファイル中7ファイルにテストなし（カバレッジ率50%）。chart.pyとCogファイルは外部連携が多くバグが発生しやすい
+- 根拠: ソース16ファイル中4ファイルにテストなし（ファイルカバレッジ75%）。前回レビューの50%から改善したが、Cog層（計1,099行）がテスト外
 
-### T-004: `bot_utils.py` の `settings` グローバル初期化がテスタビリティを低下 [Medium]
-- ファイル: `src/bot_utils.py:17`
-- カテゴリ: quality
-- 問題: `settings = SettingsManager()` がモジュールレベルで初期化されており、テスト時に独立した設定管理ができない。Cogのテスト追加時にグローバル状態が問題となる。
-- 対応: 依存注入パターンの導入、または fixture で上書き可能な設計に変更
+### T-003: CI でテストカバレッジレポートが未実装 [Medium]
+- ファイル: `.github/workflows/ci.yml`
+- カテゴリ: ci-cd
+- 問題: ruff + pytest は実行されているが、テストカバレッジの計測・可視化が未実装。カバレッジの推移が追跡できない。
+- 対応:
+  1. `pytest-cov` を `requirements-dev.txt` に追加
+  2. CI workflow に `pytest --cov=src --cov-report=term-missing` ステップを追加
+  3. オプション: coverageバッジの追加（codecov等）
 - 工数: medium
-- 根拠: テスト間の状態汚染リスク。T-003のCogテスト追加時に障壁となる
+- 根拠: Dependabot（pip + GitHub Actions）は設定済み。次のステップとしてカバレッジ可視化が有効
 
-### T-005: エラーハンドリングが `Exception` 一括キャッチ [Medium]
-- ファイル: `src/main.py:117,177,243`
-- カテゴリ: quality
-- 問題: 3通知関数すべてで `except Exception as e` により全例外を一括キャッチ。API障害、ネットワークエラー、ロジックバグの区別ができず、デバッグが困難。
-- 対応: `requests.RequestException`（API/ネットワーク）と `Exception`（ロジック）を分離し、異なるログレベルで記録
+### D-001: README の構成改善 [Low]
+- ファイル: `README.md` 複数箇所
+- カテゴリ: docs
+- 問題: 以下の改善点を検出:
+  1. 機能セクション（5-25行）でメイン機能（定期通知）とBot機能（対話型）が混在
+  2. アーキテクチャ図（275-297行）が定期通知フローのみで、Bot実行パスが未記載
+  3. 「プッシュ後、毎日自動実行」（83行）が誤解を招く表現（cron実行であり、プッシュは不要）
+  4. `.env` 設定と `data/settings.json` の役割分担がドキュメント上不明確
+- 対応: 機能セクションの分割、アーキテクチャ図の拡張、表現の修正
 - 工数: medium
-- 根拠: 現状は全エラーが同一フォーマットでDiscord通知されるため、障害原因の特定に時間がかかる
-
-### C-006: `requests` ライブラリの同期I/OがBotのイベントループをブロック [Medium]
-- ファイル: `src/oura_client.py`, `src/discord_client.py`
-- カテゴリ: perf
-- 問題: OuraClient/DiscordClient は同期ライブラリ（requests）を使用。Discord Bot（asyncio）内で呼ばれた場合、リトライ時の `time.sleep()` がイベントループをブロックする。
-- 対応: `aiohttp` への移行を検討。または `asyncio.to_thread()` でラップ
-- 工数: large
-- 根拠: main.py（GitHub Actions通知）は同期実行のため問題ないが、Bot（Cogコマンド・スケジューラー）では理論上ブロッキングが発生。前回レポートC-002のインメモリキャッシュ追加で settings.py は対応済みだが、API呼び出し部分は未対応
+- 根拠: 機能的には問題なく、ドキュメントの精度向上。初見ユーザーの理解を助ける
 
 ---
 
@@ -214,9 +177,9 @@ low: 6
 
 | ドキュメント | 状態 | 備考 |
 |-------------|------|------|
-| README.md | 充実 | セットアップ、使い方、トラブルシューティング、アーキテクチャ図あり |
+| README.md | 充実 | セットアップ、使い方、トラブルシューティング、アーキテクチャ図あり。構成改善の余地あり（D-001） |
 | .env.example | 良好 | 全環境変数を網羅（TARGET_WAKE_TIME追加済み） |
-| コード内コメント | 適切 | 日本語で必要十分 |
+| コード内コメント | 適切 | 日本語で必要十分。docstring充実 |
 | API仕様書 | なし | 現段階では不要 |
 
 ## テスト状況
@@ -225,17 +188,20 @@ low: 6
 |---------------|------|---------|-----------|
 | test_formatter.py | formatter.py | 27 | スコア判定、比較、時刻変換、レポート生成 |
 | test_advice.py | advice.py | 17 | 全条件分岐のアドバイス生成 |
-| test_discord_client.py | discord_client.py | 14 | リトライ、429処理、メッセージ/Embed/レポート送信、チャンク分割 |
-| test_bot_utils.py | bot_utils.py | 13 | 日付パース、時刻パース |
-| test_oura_client.py | oura_client.py | 10 | リトライ、期間取得、構造確認 |
-| test_settings.py | settings.py | 17 | 初期化、CRUD、リマインダー、目標通知、日次フラグ、破損復旧 |
+| test_discord_client.py | discord_client.py | 14 | リトライ、429処理、メッセージ/Embed/レポート送信 |
+| test_bot_utils.py | bot_utils.py | 23 | 日付パース、時刻パース、エッジケース |
+| test_oura_client.py | oura_client.py | 16 | リトライ、期間取得、range取得 |
+| test_settings.py | settings.py | 17 | 初期化、CRUD、リマインダー、目標通知 |
+| test_chart.py | chart.py | 12 | PNG生成、空データ、部分データ |
+| test_cogs_settings.py | cogs/settings_cog.py | 9 | 目標設定、リマインダー、通知設定 |
+| test_main.py | main.py | 10 | 通知関数のロジック |
+| conftest.py | 共通 | - | サンプルデータフィクスチャ |
 
 **テスト未対応の重要モジュール**（優先度順）:
-1. `chart.py` — グラフ生成（PNG出力検証、テスタビリティ高）
-2. `cogs/health.py` — ヘルスデータコマンド（複数日取得ロジック）
-3. `cogs/report.py` — レポート・分析コマンド
-4. `bot.py` — Botエントリポイント
-5. `cogs/scheduler.py`, `cogs/settings_cog.py`, `cogs/general.py` — その他Cog
+1. `cogs/general.py` — 自然言語パターンマッチ（14パターン、誤マッチリスク）
+2. `cogs/scheduler.py` — バックグラウンドタスク（日付境界処理）
+3. `cogs/health.py` — ヘルスデータコマンド（引数パース）
+4. `cogs/report.py` — レポートコマンド（データ取得フロー）
 
 ## 運用準備状況（ベータ段階）
 
@@ -243,35 +209,37 @@ low: 6
 |------|------|------|
 | 定期実行 | 設定済み | cron: 朝07:30JST/昼13:00JST/夜23:30JST |
 | シークレット管理 | 良好 | GitHub Secrets使用、.envはgit除外 |
-| エラー通知 | 全対応 | 朝・昼・夜すべてDiscordに送信（C-001修正済み） |
-| ログ出力 | 基本的 | logging.basicConfig設定済み、main.pyはprint混在（C-002） |
+| エラー通知 | 全対応 | 朝・昼・夜すべてDiscordに送信。Exception分類済み |
+| ログ出力 | 改善済み | main.py: logger統一。bot.py/discord_client.py: print残留（C-002） |
 | 二重実行防止 | 設定済み | concurrencyグループ設定あり |
 | 依存脆弱性チェック | 設定済み | Dependabot（pip + GitHub Actions） |
 | テスト自動実行 | 設定済み | CI: ruff + pytest (Python 3.11, 3.12) |
+| 非同期対応 | 完了 | `run_sync()` で同期API呼び出しをラップ済み |
+| Settings DI | 完了 | `_SettingsProxy` パターンでテスタビリティ向上 |
 
 ---
 
 ## 推奨アクション（次の3ステップ）
 
-1. **C-001 + C-004** を修正する — advice.pyのゼロ除算防止（1行）+ formatter.pyのfalsyチェック修正（1行）
-2. **C-002** を修正する — main.pyのprint()をlogger.info()に統一（13箇所のメカニカルな置換）
-3. **T-002** を修正する — get_sleep_range/get_sleep_details_rangeのテスト追加
+1. **C-001 + C-002 + T-001** を修正する — oura_client.pyの例外限定（1行）+ print→logger統一（5箇所）+ ruff警告修正（3行削除）
+2. **T-002** の `cogs/general.py` テストを追加する — 14パターンの正規表現マッチテスト（最優先Cogテスト）
+3. **T-003** のカバレッジレポートを CI に追加する — `pytest-cov` 導入でカバレッジ可視化
 
 ## 並列修正可能グループ
 
 以下の指摘は互いに独立しており、同時に修正可能:
-- グループA: C-001 + C-003 + C-004（防御的プログラミング）
-- グループB: C-002（ログ統一）
-- グループC: C-005（例外ハンドリング改善）
-- グループD: T-001 + T-002（テスト追加）
-- グループE: D-001（ドキュメント修正）
+- グループA: C-001 + C-002 + T-001（コード品質改善、small）
+- グループB: C-003 + C-004（chart.py改善、small）
+- グループC: T-002（Cogテスト追加、large）
+- グループD: T-003（CI改善、medium）
+- グループE: D-001（ドキュメント改善、medium）
 
 ## 次回注目ポイント
 
-- GitHub Actionsのビリングブロック解消後、実際の通知動作確認
-- テストカバレッジの拡充（特に chart.py, cogs/health.py）
+- Cog層テストの追加状況（general.py → scheduler.py の順）
+- テストカバレッジの数値的な把握（pytest-cov導入後）
 - Oura Personal Access Token の廃止予定への対応検討
-- Cogテスト追加時の bot_utils.py グローバル settings 問題（T-004）の解決
+- bot.py のリポジトリPublic化後のセキュリティ確認
 
 ## セキュリティスキャン結果
 
@@ -279,9 +247,10 @@ low: 6
 |-------------|------|
 | ハードコード機密情報 | 検出なし |
 | eval/exec使用 | 検出なし |
-| ベア例外 | 検出なし |
+| ベア例外 | 1件（C-001: oura_client.py get_daily_stress） |
 | TODO/FIXME残留 | 検出なし |
 | ログへの機密情報出力 | 検出なし |
 | .env gitignore | 設定済み |
-| ruff lint | All checks passed |
+| ruff lint | ソースコード: All checks passed |
 | Dependabot | pip + GitHub Actions 監視済み |
+| Git履歴の機密情報 | 検出なし（全27コミット調査済み） |
