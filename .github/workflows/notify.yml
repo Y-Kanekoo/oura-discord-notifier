@@ -27,6 +27,9 @@ concurrency:
   group: oura-notify-${{ github.event.schedule || github.event.inputs.type || 'manual' }}
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   send-notification:
     runs-on: ubuntu-latest
