@@ -18,6 +18,10 @@ import matplotlib  # noqa: E402
 matplotlib.use('Agg')  # GUIバックエンドを使用しない
 import matplotlib.dates as mdates  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
+from matplotlib.ticker import FuncFormatter  # noqa: E402
+
+# クロスプラットフォーム対応の日付フォーマッター（%-mはWindows非互換）
+_DATE_FORMATTER = FuncFormatter(lambda x, _: f"{mdates.num2date(x).month}/{mdates.num2date(x).day}")
 
 
 def _get_japanese_font_families() -> list[str]:
@@ -128,7 +132,7 @@ def generate_score_chart(
     ax.set_title(title, color='white', fontsize=14, fontweight='bold')
 
     # 目盛りの設定
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%-m/%-d'))
+    ax.xaxis.set_major_formatter(_DATE_FORMATTER)
     ax.xaxis.set_major_locator(mdates.DayLocator(interval=max(1, len(dates) // 10)))
     plt.xticks(rotation=45)
 
@@ -190,7 +194,7 @@ def generate_steps_chart(
     ax.set_title(title, color='white', fontsize=14, fontweight='bold')
 
     # 目盛りの設定
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%-m/%-d'))
+    ax.xaxis.set_major_formatter(_DATE_FORMATTER)
     ax.xaxis.set_major_locator(mdates.DayLocator(interval=max(1, len(dates) // 10)))
     plt.xticks(rotation=45)
 
@@ -258,7 +262,7 @@ def generate_combined_chart(
     ax1.set_ylim(40, 100)
     ax1.set_ylabel('スコア', color='white', fontsize=10)
     ax1.set_title(title, color='white', fontsize=14, fontweight='bold')
-    ax1.xaxis.set_major_formatter(mdates.DateFormatter('%-m/%-d'))
+    ax1.xaxis.set_major_formatter(_DATE_FORMATTER)
     ax1.xaxis.set_major_locator(mdates.DayLocator(interval=max(1, len(dates) // 8)))
     ax1.grid(True, alpha=0.3, color='white')
     ax1.legend(loc='upper left', facecolor=_LEGEND_BG, edgecolor='white', labelcolor='white', fontsize=9)
@@ -277,7 +281,7 @@ def generate_combined_chart(
     ax2.set_ylim(0, max(max_steps * 1.1, goal * 1.2))
     ax2.set_ylabel('歩数', color='white', fontsize=10)
     ax2.set_xlabel('日付', color='white', fontsize=10)
-    ax2.xaxis.set_major_formatter(mdates.DateFormatter('%-m/%-d'))
+    ax2.xaxis.set_major_formatter(_DATE_FORMATTER)
     ax2.xaxis.set_major_locator(mdates.DayLocator(interval=max(1, len(dates) // 8)))
     ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{int(x):,}'))
     ax2.grid(True, alpha=0.3, color='white', axis='y')

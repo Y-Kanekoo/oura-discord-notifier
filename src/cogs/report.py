@@ -145,7 +145,7 @@ class ReportCog(commands.Cog):
             start_date = date.fromisoformat(weekly["start_date"])
             end_date_parsed = date.fromisoformat(weekly["end_date"])
 
-            title = f":calendar: 週間サマリー ({start_date.strftime('%-m/%-d')} ~ {end_date_parsed.strftime('%-m/%-d')})"
+            title = f":calendar: 週間サマリー ({start_date.month}/{start_date.day} ~ {end_date_parsed.month}/{end_date_parsed.day})"
 
             # 日別サマリー
             lines: list[str] = []
@@ -167,7 +167,7 @@ class ReportCog(commands.Cog):
                     parts.append(f"歩数 {steps:,}")
 
                 if parts:
-                    lines.append(f"**{d.strftime('%-m/%-d')}**: " + " / ".join(parts))
+                    lines.append(f"**{d.month}/{d.day}**: " + " / ".join(parts))
 
             averages = weekly.get("averages", {})
             totals = weekly.get("totals", {})
@@ -247,7 +247,7 @@ class ReportCog(commands.Cog):
             start_date = date.fromisoformat(monthly["start_date"])
             end_date = date.fromisoformat(monthly["end_date"])
 
-            title = f":calendar: {days}日間サマリー ({start_date.strftime('%-m/%-d')} ~ {end_date.strftime('%-m/%-d')})"
+            title = f":calendar: {days}日間サマリー ({start_date.month}/{start_date.day} ~ {end_date.month}/{end_date.day})"
 
             embed = discord.Embed(
                 title=title,
@@ -351,7 +351,7 @@ class ReportCog(commands.Cog):
 
             start_date = date.fromisoformat(monthly["start_date"])
             end_date = date.fromisoformat(monthly["end_date"])
-            title = f"{start_date.strftime('%-m/%-d')} ~ {end_date.strftime('%-m/%-d')} ({days}日間)"
+            title = f"{start_date.month}/{start_date.day} ~ {end_date.month}/{end_date.day} ({days}日間)"
 
             # グラフ生成
             if graph_type == "scores":

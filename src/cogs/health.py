@@ -265,7 +265,7 @@ class HealthCog(commands.Cog):
                 await interaction.followup.send(f":warning: {target_date} のワークアウトデータがありません")
                 return
 
-            title = f":runner: {target_date.strftime('%-m/%-d')} のワークアウト"
+            title = f":runner: {target_date.month}/{target_date.day} のワークアウト"
 
             lines = []
             for w in workouts[:10]:  # 念のため10件まで

@@ -17,3 +17,4 @@ known-first-party = ["oura_client", "formatter", "advice", "chart", "settings", 
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+asyncio_mode = "auto"

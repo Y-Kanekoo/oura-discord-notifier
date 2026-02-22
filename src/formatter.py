@@ -169,7 +169,7 @@ def format_sleep_section(
     if sleep_date:
         try:
             dt = datetime.fromisoformat(sleep_date)
-            date_label = f" ({dt.strftime('%-m/%-d')})"
+            date_label = f" ({dt.month}/{dt.day})"
         except (ValueError, AttributeError):
             pass
 
@@ -395,7 +395,7 @@ def format_date_jp(date_str: str) -> str:
     """日付文字列を日本語形式に変換（例: 2024-12-31 → 12/31）"""
     try:
         dt = datetime.fromisoformat(date_str)
-        return dt.strftime("%-m/%-d")
+        return f"{dt.month}/{dt.day}"
     except (ValueError, AttributeError):
         return date_str
 
