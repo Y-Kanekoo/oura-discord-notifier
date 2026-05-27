@@ -1,7 +1,6 @@
 """Discord Webhook Client"""
 
 import logging
-import os
 import time
 from typing import Optional
 
@@ -55,18 +54,21 @@ class DiscordClient:
                 if should_retry:
                     continue
 
-                if response.status_code != 204 and os.environ.get("DISCORD_WEBHOOK_DEBUG"):
+                if response.status_code != 204:
                     body = response.text.strip()
                     if len(body) > 500:
                         body = body[:500] + "..."
-                    logger.debug("Discord webhook status=%d body=%s", response.status_code, body)
+                    logger.warning(
+                        "Discord webhook returned non-204 status=%d body=%s",
+                        response.status_code,
+                        body,
+                    )
                 return response
-            except requests.RequestException:
-                if attempt == self.max_retries and os.environ.get("DISCORD_WEBHOOK_DEBUG"):
-                    logger.debug("Discord webhook request failed with RequestException")
+            except requests.RequestException as exc:
                 if attempt < self.max_retries:
                     time.sleep(self.retry_backoff * attempt)
                     continue
+                logger.warning("Discord webhook request failed: %s", exc)
                 return None
         return None
 

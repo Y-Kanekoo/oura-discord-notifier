@@ -37,6 +37,16 @@ from oura_client import OuraClient  # noqa: E402
 # デフォルト設定
 DEFAULT_STEPS_GOAL = 8000
 
+# Discord content の上限は 2000 文字。コードブロック装飾と前後テキストの余白を残す
+_ERROR_MESSAGE_MAX_LEN = 1800
+
+
+def _truncate_for_discord(text: str, limit: int = _ERROR_MESSAGE_MAX_LEN) -> str:
+    """Discord メッセージ用に長すぎる文字列を末尾切り詰めする"""
+    if len(text) <= limit:
+        return text
+    return text[:limit] + "...(truncated)"
+
 
 def get_env_var(name: str, default: str | None = None) -> str:
     """環境変数を取得"""
@@ -119,14 +129,14 @@ def send_morning_report() -> bool:
     except requests.RequestException as e:
         logger.error("朝通知のAPI通信エラー: %s", e)
         try:
-            discord.send_message(f":x: **朝通知エラー（通信）**\n```{str(e)}```")
+            discord.send_message(f":x: **朝通知エラー（通信）**\n```{_truncate_for_discord(str(e))}```")
         except requests.RequestException:
             logger.error("朝通知のエラー通知送信にも失敗しました", exc_info=True)
         return False
     except Exception as e:
         logger.error("朝通知で予期しないエラー: %s", e, exc_info=True)
         try:
-            discord.send_message(f":x: **朝通知エラー**\n```{str(e)}```")
+            discord.send_message(f":x: **朝通知エラー**\n```{_truncate_for_discord(str(e))}```")
         except Exception:
             logger.error("朝通知のエラー通知送信に失敗しました", exc_info=True)
         return False
@@ -186,14 +196,14 @@ def send_noon_report() -> bool:
     except requests.RequestException as e:
         logger.error("昼通知のAPI通信エラー: %s", e)
         try:
-            discord.send_message(f":x: **昼通知エラー（通信）**\n```{str(e)}```")
+            discord.send_message(f":x: **昼通知エラー（通信）**\n```{_truncate_for_discord(str(e))}```")
         except requests.RequestException:
             logger.error("昼通知のエラー通知送信にも失敗しました", exc_info=True)
         return False
     except Exception as e:
         logger.error("昼通知で予期しないエラー: %s", e, exc_info=True)
         try:
-            discord.send_message(f":x: **昼通知エラー**\n```{str(e)}```")
+            discord.send_message(f":x: **昼通知エラー**\n```{_truncate_for_discord(str(e))}```")
         except Exception:
             logger.error("昼通知のエラー通知送信に失敗しました", exc_info=True)
         return False
@@ -259,13 +269,14 @@ def send_night_report() -> bool:
     except requests.RequestException as e:
         logger.error("夜通知のAPI通信エラー: %s", e)
         try:
-            discord.send_message(f":x: **夜通知エラー（通信）**\n```{str(e)}```")
+            discord.send_message(f":x: **夜通知エラー（通信）**\n```{_truncate_for_discord(str(e))}```")
         except requests.RequestException:
             logger.error("夜通知のエラー通知送信にも失敗しました", exc_info=True)
+        return False
     except Exception as e:
         logger.error("夜通知で予期しないエラー: %s", e, exc_info=True)
         try:
-            discord.send_message(f":x: **夜通知エラー**\n```{str(e)}```")
+            discord.send_message(f":x: **夜通知エラー**\n```{_truncate_for_discord(str(e))}```")
         except Exception:
             logger.error("夜通知のエラー通知送信に失敗しました", exc_info=True)
         return False
