@@ -134,7 +134,6 @@ pip install -r requirements.txt
 # 環境変数を設定（.envファイルを作成）
 cp .env.example .env
 # .env を編集してトークンを設定
-# 送信エラーの詳細を見たい場合は DISCORD_WEBHOOK_DEBUG=1 を設定
 
 # 実行
 cd src
@@ -231,6 +230,21 @@ python src/bot.py
 - その場合、昼通知で睡眠データが補完されます。
 
 ## トラブルシューティング
+
+### 通知が定刻に届かない（GitHub Actionsが動いていない）
+
+**症状**: cronで通知が来ない、Actionsタブに最近の実行履歴がない
+
+**原因**: GitHub は**60日間コミットがないリポジトリのスケジュールワークフローを自動的に無効化**します（[公式ドキュメント](https://docs.github.com/ja/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#schedule)）。
+
+**対処法**:
+
+1. リポジトリの **Actions** タブを開く
+2. `Oura Discord Notifier` ワークフローを選択
+3. "This scheduled workflow has been disabled" バナーが出ていれば **Enable workflow** をクリック
+4. 何らかのコミットを push して再有効化を維持（ダミーでも可）
+
+`workflow_dispatch` での手動実行は無効化中でも可能なので、まずは手動実行で動作確認すると切り分けやすいです。
 
 ### 401 Unauthorized エラー（Oura API）
 
