@@ -30,7 +30,10 @@ class OuraClient:
         self.retry_backoff = retry_backoff
 
     def _request(self, url: str, params: Optional[dict] = None) -> dict:
-        """APIリクエストを実行（リトライ付き）"""
+        """APIリクエストを実行（リトライ付き）
+
+        4xx は永続エラーとして即座に raise する。429 と 5xx のみ再試行する。
+        """
         for attempt in range(1, self.max_retries + 1):
             try:
                 response = requests.get(
@@ -44,6 +47,9 @@ class OuraClient:
                     continue
                 response.raise_for_status()
                 return response.json()
+            except requests.HTTPError:
+                # 4xx などの永続エラーは再試行せず即 raise（401/403/404 で6秒待たない）
+                raise
             except requests.RequestException:
                 if attempt < self.max_retries:
                     time.sleep(self.retry_backoff * attempt)

@@ -53,6 +53,27 @@ class TestOuraClientRequest:
         result = client._get("daily_sleep", {})
         assert result == {"data": []}
 
+    @patch("oura_client.requests.get")
+    def test_no_retry_on_401(self, mock_get):
+        """4xx（永続エラー）は再試行せず即 raise する"""
+        import requests
+
+        mock_401 = MagicMock()
+        mock_401.status_code = 401
+        mock_401.raise_for_status.side_effect = requests.HTTPError("401 Unauthorized")
+        mock_get.return_value = mock_401
+
+        client = OuraClient("test_token", retry_backoff=0.01)
+        try:
+            client._get("daily_sleep", {})
+        except requests.HTTPError:
+            pass
+        else:
+            raise AssertionError("HTTPError が raise されるべき")
+
+        # 1回しか呼ばれていないことを確認（リトライしていない）
+        assert mock_get.call_count == 1
+
 
 class TestOuraClientGetRange:
     def setup_method(self):
