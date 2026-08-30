@@ -4,8 +4,8 @@ on:
   schedule:
     # 朝通知: 07:30 JST = 22:30 UTC (実際は08:30-09:00頃に届く想定)
     - cron: '30 22 * * *'
-    # 昼通知: 13:00 JST = 04:00 UTC
-    - cron: '0 4 * * *'
+    # 昼通知: 13:13 JST = 04:13 UTC（毎時0分の混雑を回避）
+    - cron: '13 4 * * *'
     # 夜通知: 23:30 JST = 14:30 UTC
     - cron: '30 14 * * *'
 
@@ -36,10 +36,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.11'
 
@@ -57,22 +57,22 @@ jobs:
         id: notify-type
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "type=${{ github.event.inputs.type }}" >> $GITHUB_OUTPUT
+            echo "type=${{ github.event.inputs.type }}" >> "$GITHUB_OUTPUT"
           else
             # スケジュール実行時はcron式から判定
             CRON="${{ github.event.schedule }}"
             case "$CRON" in
               "30 22 * * *")
-                echo "type=morning" >> $GITHUB_OUTPUT
+                echo "type=morning" >> "$GITHUB_OUTPUT"
                 ;;
-              "0 4 * * *")
-                echo "type=noon" >> $GITHUB_OUTPUT
+              "13 4 * * *")
+                echo "type=noon" >> "$GITHUB_OUTPUT"
                 ;;
               "30 14 * * *")
-                echo "type=night" >> $GITHUB_OUTPUT
+                echo "type=night" >> "$GITHUB_OUTPUT"
                 ;;
               *)
-                echo "type=morning" >> $GITHUB_OUTPUT
+                echo "type=morning" >> "$GITHUB_OUTPUT"
                 ;;
             esac
           fi
