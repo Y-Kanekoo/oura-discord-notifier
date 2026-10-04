@@ -26,6 +26,7 @@ except ImportError:
     pass
 
 from bot_utils import get_jst_now, get_jst_today  # noqa: E402
+from diagnostics import safe_diagnostic  # noqa: E402
 from discord_client import DiscordClient  # noqa: E402
 from formatter import (  # noqa: E402
     format_morning_report,
@@ -37,15 +38,19 @@ from oura_client import OuraClient  # noqa: E402
 # デフォルト設定
 DEFAULT_STEPS_GOAL = 8000
 
-# Discord content の上限は 2000 文字。コードブロック装飾と前後テキストの余白を残す
-_ERROR_MESSAGE_MAX_LEN = 1800
-
-
-def _truncate_for_discord(text: str, limit: int = _ERROR_MESSAGE_MAX_LEN) -> str:
-    """Discord メッセージ用に長すぎる文字列を末尾切り詰めする"""
-    if len(text) <= limit:
-        return text
-    return text[:limit] + "...(truncated)"
+def _report_error(discord: DiscordClient | None, slot: str, error: Exception) -> bool:
+    """固定通知を最大1回試みる. 追加通知が失敗しても再帰しない."""
+    diagnostic = safe_diagnostic(error, provider="notification", operation=slot)
+    logger.error("%s", diagnostic)
+    if discord is not None:
+        label = {"morning": "朝", "noon": "昼", "night": "夜"}[slot]
+        kind = "（通信）" if isinstance(error, requests.RequestException) else ""
+        try:
+            if not discord.send_message(f":x: **{label}通知エラー{kind}**\n{diagnostic}"):
+                logger.error("provider=discord operation=error_notice result=failed")
+        except Exception as exc:
+            logger.error("%s", safe_diagnostic(exc, provider="discord", operation="error_notice"))
+    return False
 
 
 def get_env_var(name: str, default: str | None = None) -> str:
@@ -68,13 +73,14 @@ def get_jst_hour() -> int:
 
 def send_morning_report() -> bool:
     """朝通知：睡眠 + Readiness + 今日の方針"""
-    oura_token = get_env_var("OURA_ACCESS_TOKEN")
-    discord_webhook = get_env_var("DISCORD_WEBHOOK_URL")
-
-    oura = OuraClient(oura_token)
-    discord = DiscordClient(discord_webhook)
-
+    discord = None
     try:
+        oura_token = get_env_var("OURA_ACCESS_TOKEN")
+        discord_webhook = get_env_var("DISCORD_WEBHOOK_URL")
+
+        oura = OuraClient(oura_token)
+        discord = DiscordClient(discord_webhook)
+
         # 前日の睡眠データと当日のReadinessを取得
         today = get_jst_today()
         yesterday = today - timedelta(days=1)
@@ -112,7 +118,7 @@ def send_morning_report() -> bool:
             if weekly_data and weekly_data.get("averages"):
                 weekly_averages = weekly_data["averages"]
         except requests.RequestException as e:
-            logger.warning("週間データの取得に失敗: %s", e)
+            logger.warning("%s", safe_diagnostic(e, provider="oura", operation="weekly"))
 
         title, sections = format_morning_report(data, prev_data, weekly_averages)
 
@@ -126,20 +132,8 @@ def send_morning_report() -> bool:
 
         return success
 
-    except requests.RequestException as e:
-        logger.error("朝通知のAPI通信エラー: %s", e)
-        try:
-            discord.send_message(f":x: **朝通知エラー（通信）**\n```{_truncate_for_discord(str(e))}```")
-        except requests.RequestException:
-            logger.error("朝通知のエラー通知送信にも失敗しました", exc_info=True)
-        return False
-    except Exception as e:
-        logger.error("朝通知で予期しないエラー: %s", e, exc_info=True)
-        try:
-            discord.send_message(f":x: **朝通知エラー**\n```{_truncate_for_discord(str(e))}```")
-        except Exception:
-            logger.error("朝通知のエラー通知送信に失敗しました", exc_info=True)
-        return False
+    except Exception as exc:
+        return _report_error(discord, "morning", exc)
 
 
 # =============================================================================
@@ -148,14 +142,15 @@ def send_morning_report() -> bool:
 
 def send_noon_report() -> bool:
     """昼通知：活動進捗 + 睡眠サマリー（朝に取れなかった場合の補完）"""
-    oura_token = get_env_var("OURA_ACCESS_TOKEN")
-    discord_webhook = get_env_var("DISCORD_WEBHOOK_URL")
-    steps_goal = int(get_env_var("DAILY_STEPS_GOAL", str(DEFAULT_STEPS_GOAL)))
-
-    oura = OuraClient(oura_token)
-    discord = DiscordClient(discord_webhook)
-
+    discord = None
     try:
+        oura_token = get_env_var("OURA_ACCESS_TOKEN")
+        discord_webhook = get_env_var("DISCORD_WEBHOOK_URL")
+        steps_goal = int(get_env_var("DAILY_STEPS_GOAL", str(DEFAULT_STEPS_GOAL)))
+
+        oura = OuraClient(oura_token)
+        discord = DiscordClient(discord_webhook)
+
         today = get_jst_today()
         current_hour = get_jst_hour()
 
@@ -179,8 +174,6 @@ def send_noon_report() -> bool:
 
         if not should_send:
             logger.info("昼通知は不要です")
-            if activity:
-                logger.info("  歩数: %s / 目標ペース: OK", f"{activity.get('steps', 0):,}")
             return True
 
         logger.info("昼通知をDiscordに送信中")
@@ -193,20 +186,8 @@ def send_noon_report() -> bool:
 
         return success
 
-    except requests.RequestException as e:
-        logger.error("昼通知のAPI通信エラー: %s", e)
-        try:
-            discord.send_message(f":x: **昼通知エラー（通信）**\n```{_truncate_for_discord(str(e))}```")
-        except requests.RequestException:
-            logger.error("昼通知のエラー通知送信にも失敗しました", exc_info=True)
-        return False
-    except Exception as e:
-        logger.error("昼通知で予期しないエラー: %s", e, exc_info=True)
-        try:
-            discord.send_message(f":x: **昼通知エラー**\n```{_truncate_for_discord(str(e))}```")
-        except Exception:
-            logger.error("昼通知のエラー通知送信に失敗しました", exc_info=True)
-        return False
+    except Exception as exc:
+        return _report_error(discord, "noon", exc)
 
 
 # =============================================================================
@@ -215,14 +196,15 @@ def send_noon_report() -> bool:
 
 def send_night_report() -> bool:
     """夜通知：今日の結果 + 減速リマインダー"""
-    oura_token = get_env_var("OURA_ACCESS_TOKEN")
-    discord_webhook = get_env_var("DISCORD_WEBHOOK_URL")
-    target_wake_time = os.environ.get("TARGET_WAKE_TIME", "07:00")
-
-    oura = OuraClient(oura_token)
-    discord = DiscordClient(discord_webhook)
-
+    discord = None
     try:
+        oura_token = get_env_var("OURA_ACCESS_TOKEN")
+        discord_webhook = get_env_var("DISCORD_WEBHOOK_URL")
+        target_wake_time = os.environ.get("TARGET_WAKE_TIME", "07:00")
+
+        oura = OuraClient(oura_token)
+        discord = DiscordClient(discord_webhook)
+
         today = get_jst_today()
         yesterday = today - timedelta(days=1)
 
@@ -245,7 +227,7 @@ def send_night_report() -> bool:
             if weekly_data and weekly_data.get("averages"):
                 weekly_averages = weekly_data["averages"]
         except requests.RequestException as e:
-            logger.warning("週間データの取得に失敗: %s", e)
+            logger.warning("%s", safe_diagnostic(e, provider="oura", operation="weekly"))
 
         title, sections = format_night_report(
             readiness,
@@ -266,20 +248,8 @@ def send_night_report() -> bool:
 
         return success
 
-    except requests.RequestException as e:
-        logger.error("夜通知のAPI通信エラー: %s", e)
-        try:
-            discord.send_message(f":x: **夜通知エラー（通信）**\n```{_truncate_for_discord(str(e))}```")
-        except requests.RequestException:
-            logger.error("夜通知のエラー通知送信にも失敗しました", exc_info=True)
-        return False
-    except Exception as e:
-        logger.error("夜通知で予期しないエラー: %s", e, exc_info=True)
-        try:
-            discord.send_message(f":x: **夜通知エラー**\n```{_truncate_for_discord(str(e))}```")
-        except Exception:
-            logger.error("夜通知のエラー通知送信に失敗しました", exc_info=True)
-        return False
+    except Exception as exc:
+        return _report_error(discord, "night", exc)
 
 
 # =============================================================================
@@ -309,10 +279,14 @@ def main():
     if args.test:
         discord_webhook = get_env_var("DISCORD_WEBHOOK_URL")
         discord = DiscordClient(discord_webhook)
-        success = discord.send_message(
-            ":white_check_mark: **テスト成功！**\n"
-            "Oura Discord Notifierが正常に動作しています。"
-        )
+        try:
+            success = discord.send_message(
+                ":white_check_mark: **テスト成功！**\n"
+                "Oura Discord Notifierが正常に動作しています。"
+            )
+        except Exception as exc:
+            logger.error("%s", safe_diagnostic(exc, provider="discord", operation="send"))
+            success = False
         logger.info("テストメッセージ送信: %s", "成功" if success else "失敗")
         sys.exit(0 if success else 1)
 

@@ -69,3 +69,23 @@ def sample_activity_data():
         "active_calories": 350,
         "total_calories": 2200,
     }
+
+
+# HTTP stub をすり抜ける通信が例外として握りつぶされても teardown で失敗させる.
+_NETWORK_ATTEMPTS = []
+
+
+def _deny_network(event, args):
+    if event in {"socket.connect", "socket.getaddrinfo", "socket.gethostbyname", "socket.sendto"}:
+        _NETWORK_ATTEMPTS.append(event)
+        raise RuntimeError("offline test attempted network")
+
+
+sys.addaudithook(_deny_network)
+
+
+@pytest.fixture(autouse=True)
+def no_provider_network():
+    before = len(_NETWORK_ATTEMPTS)
+    yield
+    assert len(_NETWORK_ATTEMPTS) == before, "unexpected network attempt"
