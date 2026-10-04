@@ -231,6 +231,28 @@ python src/bot.py
 
 ## トラブルシューティング
 
+### 診断ログの情報制限（Issue #35）
+
+定期通知 CLI（朝・昼・夜・`--test`）と共有 HTTP client は、診断を
+provider・操作・固定エラー分類・HTTP status・試行回数に限定します。
+例外原文、例外チェーン、traceback、HTTP 本文、URL、headers、payload、歩数などの
+健康値を診断へ出しません。requests の低層接続 DEBUG ログも抑制します。
+通常の健康レポートには意図した健康データを従来どおり含め、payload を伏せ字にしません。
+
+朝・昼・夜の失敗通知は固定テンプレートと安全な診断のみです。追加通知は最大1呼出で、
+内部の既存 retry を含めても既定最大3試行。追加通知の False・例外で再帰せず、元の
+レポート失敗（False／CLI exit 1）を維持します。204 のみ送信成功、既存の retry/backoff、
+chunk 分割、週平均・ストレスの optional fallback、昼の正常 skip は変更しません。
+再試行による受領済みメッセージの重複可能性や実到達保証はこの変更では解決しません。
+
+対象は定期 CLI と共有 client の診断です。別 entrypoint の `bot.py`／対話型 cogs の
+例外応答・logging は残る監査対象で、全リポジトリの秘匿化を保証するものではありません。
+`docs/review-report.md` の過去レビューは当時の記録であり、本修正の検証結果ではありません。
+
+テストでは合成 sentinel と HTTP stub のみを使い、予期しない socket/DNS を拒否します。
+実 Oura データ・実 Discord 到達・資格情報は未検証です。依存・Secrets・workflow・時刻は
+変更せず、main マージで即時通知は行いません。次の既存 schedule から適用されます。
+
 ### 通知が定刻に届かない（GitHub Actionsが動いていない）
 
 **症状**: cronで通知が来ない、Actionsタブに最近の実行履歴がない
@@ -248,7 +270,7 @@ python src/bot.py
 
 ### 401 Unauthorized エラー（Oura API）
 
-**症状**: `Error: 401 Client Error: Unauthorized for url: https://api.ouraring.com/...`
+**症状**: `provider=notification operation=morning error=http status=401`
 
 **原因と対処法**:
 

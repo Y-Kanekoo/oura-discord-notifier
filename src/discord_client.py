@@ -6,6 +6,8 @@ from typing import Optional
 
 import requests
 
+from diagnostics import safe_diagnostic, suppress_http_debug_logs
+
 logger = logging.getLogger(__name__)
 
 
@@ -21,6 +23,7 @@ class DiscordClient:
         max_retries: int = 3,
         retry_backoff: float = 1.0,
     ):
+        suppress_http_debug_logs()
         self.webhook_url = webhook_url
         self.timeout = timeout
         self.max_retries = max_retries
@@ -55,20 +58,15 @@ class DiscordClient:
                     continue
 
                 if response.status_code != 204:
-                    body = response.text.strip()
-                    if len(body) > 500:
-                        body = body[:500] + "..."
-                    logger.warning(
-                        "Discord webhook returned non-204 status=%d body=%s",
-                        response.status_code,
-                        body,
-                    )
+                    logger.warning("%s", safe_diagnostic(
+                        provider="discord", operation="send", status=response.status_code, attempt=attempt,
+                    ))
                 return response
             except requests.RequestException as exc:
                 if attempt < self.max_retries:
                     time.sleep(self.retry_backoff * attempt)
                     continue
-                logger.warning("Discord webhook request failed: %s", exc)
+                logger.warning("%s", safe_diagnostic(exc, provider="discord", operation="send", attempt=attempt))
                 return None
         return None
 

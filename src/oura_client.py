@@ -7,6 +7,8 @@ from typing import Optional
 
 import requests
 
+from diagnostics import safe_diagnostic, suppress_http_debug_logs
+
 logger = logging.getLogger(__name__)
 
 
@@ -23,6 +25,7 @@ class OuraClient:
         max_retries: int = 3,
         retry_backoff: float = 1.0,
     ):
+        suppress_http_debug_logs()
         self.access_token = access_token
         self.headers = {"Authorization": f"Bearer {access_token}"}
         self.timeout = timeout
@@ -337,8 +340,8 @@ class OuraClient:
             data = self._get("daily_stress", params)
             if data.get("data"):
                 return data["data"][0]
-        except requests.RequestException:
-            logger.warning("ストレスデータの取得に失敗しました", exc_info=True)
+        except requests.RequestException as exc:
+            logger.warning("%s", safe_diagnostic(exc, provider="oura", operation="stress"))
         return None
 
     def get_monthly_data(self, end_date: Optional[date] = None, days: int = 30) -> dict:
