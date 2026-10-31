@@ -20,14 +20,27 @@ def safe_diagnostic(
 ) -> str:
     """原文・repr・chain・body を読まず、固定分類と検証済み整数だけ返す."""
     provider = provider if provider in {"oura", "discord", "notification"} else "unknown"
-    operation = operation if operation in {
-        "request", "send", "morning", "noon", "night", "weekly", "stress", "error_notice",
-    } else "unknown"
+    operation = (
+        operation
+        if operation
+        in {
+            "request",
+            "send",
+            "morning",
+            "noon",
+            "night",
+            "weekly",
+            "stress",
+            "error_notice",
+        }
+        else "unknown"
+    )
     category = "unexpected"
     if isinstance(error, requests.Timeout):
         category = "timeout"
-    elif isinstance(error, (requests.exceptions.InvalidURL, requests.exceptions.MissingSchema,
-                            requests.exceptions.InvalidSchema)):
+    elif isinstance(
+        error, (requests.exceptions.InvalidURL, requests.exceptions.MissingSchema, requests.exceptions.InvalidSchema)
+    ):
         category = "invalid_url"
     elif isinstance(error, requests.HTTPError):
         category = "http"

@@ -1,31 +1,34 @@
 # local-ci の設定（development-hub テンプレート v1・テスト標準の4段階、既存repo向け）。
 # skip の段階は docs/TESTING.md のスキップ記録と合わせて、整備したら外す。
 fail_fast: true
+# 依存は requirements*.txt で管理している（pyproject は ruff・pytest の設定だけ）ので、
+# GitHub Actions の CI と同じく requirements-dev.txt から入れる。
 setup:
-  - uv sync --dev
+  - uv venv --allow-existing -q
+  - uv pip install -q -r requirements-dev.txt
 jobs:
   lint:
     kind: lint
     stage: static
-    run: ["uv run ruff check .", "uv run ruff format --check ."]
+    run: ["uv run --no-project ruff check .", "uv run --no-project ruff format --check ."]
   typecheck:
     kind: typecheck
     stage: static
-    run: "uv run mypy"
+    run: "uv run --no-project mypy"
     skip: true
     skip_reason: "mypy が未導入（対象を絞って導入したら skip を外す）"
   secrets:
     kind: lint
     stage: static
-    run: "uv run python scripts/scan_secrets.py"
+    run: "uv run --no-project python scripts/scan_secrets.py"
   unit:
     kind: test
     stage: unit
-    run: "uv run pytest"
+    run: "uv run --no-project pytest"
   api:
     kind: api
     stage: api
-    run: "uv run pytest tests/api"
+    run: "uv run --no-project pytest tests/api"
     skip: true
     skip_reason: "tests/api がない（--extras testing で土台を追加し、契約テストを書いたら skip を外す）"
   e2e:

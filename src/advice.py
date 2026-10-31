@@ -41,9 +41,7 @@ def generate_advice(
             )
         elif readiness_score >= 60:
             advice_parts.append(
-                ":warning: **やや疲れ気味**\n"
-                "今日は無理せず、適度に休息を取りましょう。\n"
-                "激しい運動は避けて。"
+                ":warning: **やや疲れ気味**\n今日は無理せず、適度に休息を取りましょう。\n激しい運動は避けて。"
             )
         else:
             advice_parts.append(
@@ -74,15 +72,11 @@ def generate_advice(
 
         if progress >= 1.0:
             advice_parts.append(
-                f":star2: **歩数目標達成！**\n"
-                f"素晴らしい！{steps:,} 歩歩きました。\n"
-                f"この調子を維持しましょう。"
+                f":star2: **歩数目標達成！**\n素晴らしい！{steps:,} 歩歩きました。\nこの調子を維持しましょう。"
             )
         elif progress >= 0.7:
             advice_parts.append(
-                f":walking: **歩数目標まであと少し**\n"
-                f"あと {remaining:,} 歩で達成！\n"
-                f"夕方の散歩で達成できそうです。"
+                f":walking: **歩数目標まであと少し**\nあと {remaining:,} 歩で達成！\n夕方の散歩で達成できそうです。"
             )
         elif progress < 0.3:
             advice_parts.append(
@@ -94,23 +88,16 @@ def generate_advice(
     # 活動スコアベースのアドバイス
     if activity_score is not None:
         if activity_score >= 85:
-            advice_parts.append(
-                ":muscle: **活動量が十分です**\n"
-                "今日の運動は順調！休息も大切に。"
-            )
+            advice_parts.append(":muscle: **活動量が十分です**\n今日の運動は順調！休息も大切に。")
         elif activity_score < 50 and (steps is None or (steps_goal > 0 and steps / steps_goal < 0.5)):
             advice_parts.append(
-                ":couch_and_lamp: **活動量が少なめ**\n"
-                "デスクワークが多い日？\n"
-                "1時間に1回は立ち上がりましょう。"
+                ":couch_and_lamp: **活動量が少なめ**\nデスクワークが多い日？\n1時間に1回は立ち上がりましょう。"
             )
 
     # アドバイスがない場合のデフォルト
     if not advice_parts:
         advice_parts.append(
-            ":sparkles: **特に問題なし**\n"
-            "今日も健康的に過ごしていますね！\n"
-            "この調子で良いバランスを維持しましょう。"
+            ":sparkles: **特に問題なし**\n今日も健康的に過ごしていますね！\nこの調子で良いバランスを維持しましょう。"
         )
 
     return "\n\n".join(advice_parts)

@@ -110,11 +110,11 @@ low: 0
 - カテゴリ: quality
 - 問題: `generate_score_chart`, `generate_steps_chart`, `generate_combined_chart` の3関数で、背景色・軸色・枠線色の設定が重複:
   ```python
-  fig.patch.set_facecolor('#2C2F33')
-  ax.set_facecolor('#2C2F33')
-  ax.tick_params(colors='white')
+  fig.patch.set_facecolor("#2C2F33")
+  ax.set_facecolor("#2C2F33")
+  ax.tick_params(colors="white")
   for spine in ax.spines.values():
-      spine.set_color('white')
+      spine.set_color("white")
   ```
 - 対応: `_setup_chart_style(fig, ax)` ヘルパーに共通化
 - 工数: small

@@ -137,6 +137,7 @@ def get_today_policy(readiness_score: int) -> tuple[str, str, int]:
 # 朝通知用フォーマッター
 # =============================================================================
 
+
 def format_time_from_iso(iso_string: str) -> str:
     """ISO形式の時刻から HH:MM 形式を取得"""
     try:
@@ -191,11 +192,13 @@ def format_sleep_section(
         if bedtime_start and bedtime_end:
             start_time = format_time_from_iso(bedtime_start)
             end_time = format_time_from_iso(bedtime_end)
-            fields.append({
-                "name": ":clock10: 就寝 → 起床",
-                "value": f"{start_time} → {end_time}",
-                "inline": True,
-            })
+            fields.append(
+                {
+                    "name": ":clock10: 就寝 → 起床",
+                    "value": f"{start_time} → {end_time}",
+                    "inline": True,
+                }
+            )
 
         total_sleep_duration = sleep_details.get("total_sleep_duration")
         deep_sleep_duration = sleep_details.get("deep_sleep_duration")
@@ -204,58 +207,72 @@ def format_sleep_section(
         average_hrv = sleep_details.get("average_hrv")
 
         if total_sleep_duration:
-            fields.append({
-                "name": ":bed: 総睡眠時間",
-                "value": format_duration(total_sleep_duration),
-                "inline": True,
-            })
+            fields.append(
+                {
+                    "name": ":bed: 総睡眠時間",
+                    "value": format_duration(total_sleep_duration),
+                    "inline": True,
+                }
+            )
 
         if deep_sleep_duration:
-            fields.append({
-                "name": ":new_moon: 深い睡眠",
-                "value": format_duration(deep_sleep_duration),
-                "inline": True,
-            })
+            fields.append(
+                {
+                    "name": ":new_moon: 深い睡眠",
+                    "value": format_duration(deep_sleep_duration),
+                    "inline": True,
+                }
+            )
 
         if rem_sleep_duration:
-            fields.append({
-                "name": ":crescent_moon: レム睡眠",
-                "value": format_duration(rem_sleep_duration),
-                "inline": True,
-            })
+            fields.append(
+                {
+                    "name": ":crescent_moon: レム睡眠",
+                    "value": format_duration(rem_sleep_duration),
+                    "inline": True,
+                }
+            )
 
         light_sleep_duration = sleep_details.get("light_sleep_duration")
         if light_sleep_duration:
-            fields.append({
-                "name": ":last_quarter_moon: 浅い睡眠",
-                "value": format_duration(light_sleep_duration),
-                "inline": True,
-            })
+            fields.append(
+                {
+                    "name": ":last_quarter_moon: 浅い睡眠",
+                    "value": format_duration(light_sleep_duration),
+                    "inline": True,
+                }
+            )
 
         if lowest_heart_rate:
-            fields.append({
-                "name": ":heart: 最低心拍数",
-                "value": f"{lowest_heart_rate} bpm",
-                "inline": True,
-            })
+            fields.append(
+                {
+                    "name": ":heart: 最低心拍数",
+                    "value": f"{lowest_heart_rate} bpm",
+                    "inline": True,
+                }
+            )
 
         if average_hrv:
-            fields.append({
-                "name": ":chart_with_upwards_trend: 平均HRV",
-                "value": f"{average_hrv:.0f} ms",
-                "inline": True,
-            })
+            fields.append(
+                {
+                    "name": ":chart_with_upwards_trend: 平均HRV",
+                    "value": f"{average_hrv:.0f} ms",
+                    "inline": True,
+                }
+            )
 
         # 睡眠効率を計算
         time_in_bed = sleep_details.get("time_in_bed")
         if total_sleep_duration and time_in_bed and time_in_bed > 0:
             efficiency = (total_sleep_duration / time_in_bed) * 100
             efficiency_emoji = ":star:" if efficiency >= 85 else ":ok:" if efficiency >= 75 else ":warning:"
-            fields.append({
-                "name": f"{efficiency_emoji} 睡眠効率",
-                "value": f"{efficiency:.0f}%",
-                "inline": True,
-            })
+            fields.append(
+                {
+                    "name": f"{efficiency_emoji} 睡眠効率",
+                    "value": f"{efficiency:.0f}%",
+                    "inline": True,
+                }
+            )
 
     # スコアに応じた色
     if score >= 85:
@@ -301,27 +318,33 @@ def format_readiness_section(
 
     recovery_index = contributors.get("recovery_index")
     if recovery_index:
-        fields.append({
-            "name": ":heartpulse: 回復度",
-            "value": f"スコア: {recovery_index}",
-            "inline": True,
-        })
+        fields.append(
+            {
+                "name": ":heartpulse: 回復度",
+                "value": f"スコア: {recovery_index}",
+                "inline": True,
+            }
+        )
 
     resting_hr = contributors.get("resting_heart_rate")
     if resting_hr:
-        fields.append({
-            "name": ":heart: 安静時心拍",
-            "value": f"スコア: {resting_hr}",
-            "inline": True,
-        })
+        fields.append(
+            {
+                "name": ":heart: 安静時心拍",
+                "value": f"スコア: {resting_hr}",
+                "inline": True,
+            }
+        )
 
     hrv_balance = contributors.get("hrv_balance")
     if hrv_balance:
-        fields.append({
-            "name": ":chart_with_upwards_trend: HRVバランス",
-            "value": f"スコア: {hrv_balance}",
-            "inline": True,
-        })
+        fields.append(
+            {
+                "name": ":chart_with_upwards_trend: HRVバランス",
+                "value": f"スコア: {hrv_balance}",
+                "inline": True,
+            }
+        )
 
     if score >= 85:
         color = 0x00FF00
@@ -390,6 +413,7 @@ def format_morning_report(
 # =============================================================================
 # 昼通知用フォーマッター
 # =============================================================================
+
 
 def format_date_jp(date_str: str) -> str:
     """日付文字列を日本語形式に変換（例: 2024-12-31 → 12/31）"""
@@ -496,28 +520,30 @@ def format_noon_report(
             filled = int(progress_percent / 10)
             bar = "█" * filled + "░" * (bar_length - filled)
 
-            sections.append({
-                "title": ":footprints: 歩数の進捗",
-                "description": f"**{steps:,} / {steps_goal:,} 歩** ({progress_percent:.0f}%)\n`{bar}`",
-                "color": 0xFF9900,  # オレンジ
-                "fields": [
-                    {
-                        "name": ":chart_with_downwards_trend: 目標ペース",
-                        "value": f"{expected_steps:,} 歩",
-                        "inline": True,
-                    },
-                    {
-                        "name": ":warning: 差分",
-                        "value": f"-{expected_steps - steps:,} 歩",
-                        "inline": True,
-                    },
-                    {
-                        "name": ":bulb: 今すぐできること",
-                        "value": "10分歩く（約1,000歩）",
-                        "inline": False,
-                    },
-                ],
-            })
+            sections.append(
+                {
+                    "title": ":footprints: 歩数の進捗",
+                    "description": f"**{steps:,} / {steps_goal:,} 歩** ({progress_percent:.0f}%)\n`{bar}`",
+                    "color": 0xFF9900,  # オレンジ
+                    "fields": [
+                        {
+                            "name": ":chart_with_downwards_trend: 目標ペース",
+                            "value": f"{expected_steps:,} 歩",
+                            "inline": True,
+                        },
+                        {
+                            "name": ":warning: 差分",
+                            "value": f"-{expected_steps - steps:,} 歩",
+                            "inline": True,
+                        },
+                        {
+                            "name": ":bulb: 今すぐできること",
+                            "value": "10分歩く（約1,000歩）",
+                            "inline": False,
+                        },
+                    ],
+                }
+            )
 
     if not should_send:
         return "", [], False
@@ -534,6 +560,7 @@ def format_noon_report(
 # =============================================================================
 # 夜通知用フォーマッター
 # =============================================================================
+
 
 def format_night_report(
     readiness_data: Optional[dict],
@@ -575,28 +602,30 @@ def format_night_report(
         if weekly_avg_activity is not None:
             trend = format_weekly_trend(activity_score, weekly_avg_activity)
 
-        sections.append({
-            "title": ":bar_chart: 今日の結果",
-            "description": f"**活動スコア: {activity_score}** {get_score_emoji(activity_score)}{comparison}{trend}",
-            "color": 0x3498DB,  # 青
-            "fields": [
-                {
-                    "name": ":footprints: 歩数",
-                    "value": f"{steps:,} 歩",
-                    "inline": True,
-                },
-                {
-                    "name": ":fire: アクティブカロリー",
-                    "value": f"{active_calories:,} kcal",
-                    "inline": True,
-                },
-                {
-                    "name": ":zap: Readiness",
-                    "value": f"{readiness_score}",
-                    "inline": True,
-                },
-            ],
-        })
+        sections.append(
+            {
+                "title": ":bar_chart: 今日の結果",
+                "description": f"**活動スコア: {activity_score}** {get_score_emoji(activity_score)}{comparison}{trend}",
+                "color": 0x3498DB,  # 青
+                "fields": [
+                    {
+                        "name": ":footprints: 歩数",
+                        "value": f"{steps:,} 歩",
+                        "inline": True,
+                    },
+                    {
+                        "name": ":fire: アクティブカロリー",
+                        "value": f"{active_calories:,} kcal",
+                        "inline": True,
+                    },
+                    {
+                        "name": ":zap: Readiness",
+                        "value": f"{readiness_score}",
+                        "inline": True,
+                    },
+                ],
+            }
+        )
 
     # 目標就寝時刻を計算
     target_bedtime = calculate_target_bedtime(target_wake_time, sleep_hours=7.5)
@@ -624,12 +653,12 @@ def format_night_report(
         )
         reminder_color = 0x9B59B6  # 紫
 
-    sections.append({
-        "title": ":bed: 減速開始（就寝90分前）",
-        "description": reminder_desc,
-        "color": reminder_color,
-    })
+    sections.append(
+        {
+            "title": ":bed: 減速開始（就寝90分前）",
+            "description": reminder_desc,
+            "color": reminder_color,
+        }
+    )
 
     return title, sections
-
-

@@ -54,7 +54,7 @@ class TestGenerateScoreChart:
         data = self._make_data()
         result = generate_score_chart(data)
         header = result.read(8)
-        assert header[:4] == b'\x89PNG'
+        assert header[:4] == b"\x89PNG"
 
     def test_empty_data(self):
         """空データでもエラーにならない"""
@@ -79,10 +79,7 @@ class TestGenerateScoreChart:
 
 class TestGenerateStepsChart:
     def _make_data(self, days=7):
-        return [
-            {"date": f"2026-02-{10 + i:02d}", "steps": 5000 + i * 1000}
-            for i in range(days)
-        ]
+        return [{"date": f"2026-02-{10 + i:02d}", "steps": 5000 + i * 1000} for i in range(days)]
 
     def test_returns_bytesio(self):
         """BytesIOオブジェクトを返す"""

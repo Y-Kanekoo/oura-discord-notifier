@@ -127,9 +127,7 @@ class TestSchedulerLoop:
     @patch("cogs.scheduler.get_oura_client")
     @patch("cogs.scheduler.settings")
     @patch("cogs.scheduler.get_jst_now")
-    async def test_goal_notification_sent(
-        self, mock_now, mock_settings, mock_oura, mock_run_sync, mock_today
-    ):
+    async def test_goal_notification_sent(self, mock_now, mock_settings, mock_oura, mock_run_sync, mock_today):
         """歩数が目標に達した場合に通知が送信される"""
         from datetime import date
         from zoneinfo import ZoneInfo

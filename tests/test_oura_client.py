@@ -71,9 +71,7 @@ class TestOuraClientGetRange:
         }
         mock_get.return_value = mock_response
 
-        result = self.client._get_range(
-            "daily_sleep", date(2026, 2, 15), date(2026, 2, 17)
-        )
+        result = self.client._get_range("daily_sleep", date(2026, 2, 15), date(2026, 2, 17))
         assert len(result) == 3
         assert result[0]["score"] == 80
         assert result[2]["day"] == "2026-02-17"
@@ -85,9 +83,7 @@ class TestOuraClientGetRange:
         mock_response.json.return_value = {"data": []}
         mock_get.return_value = mock_response
 
-        result = self.client._get_range(
-            "daily_sleep", date(2026, 2, 15), date(2026, 2, 17)
-        )
+        result = self.client._get_range("daily_sleep", date(2026, 2, 15), date(2026, 2, 17))
         assert result == []
 
 
@@ -199,9 +195,7 @@ class TestOuraClientGetSleep:
     def test_get_sleep_returns_first(self, mock_get):
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "data": [{"score": 82, "day": "2026-02-17"}]
-        }
+        mock_response.json.return_value = {"data": [{"score": 82, "day": "2026-02-17"}]}
         mock_get.return_value = mock_response
 
         result = self.client.get_sleep(date(2026, 2, 17))
@@ -226,6 +220,7 @@ class TestOuraClientBuildPeriodData:
     @patch("oura_client.requests.get")
     def test_build_period_data(self, mock_get):
         """_build_period_dataが3回のAPI呼び出しでデータを構築することを確認"""
+
         # 3つのエンドポイントに対してそれぞれレスポンスを返す
         def side_effect(url, **kwargs):
             mock_resp = MagicMock()

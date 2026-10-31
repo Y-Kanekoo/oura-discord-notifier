@@ -47,16 +47,14 @@ class TestSleepCommand:
     @patch("cogs.health.run_sync")
     @patch("cogs.health.get_oura_client")
     @patch("cogs.health.get_jst_today")
-    async def test_sleep_default_date(
-        self, mock_today, mock_oura, mock_run_sync, mock_format, mock_embed
-    ):
+    async def test_sleep_default_date(self, mock_today, mock_oura, mock_run_sync, mock_format, mock_embed):
         """日付未指定時はデフォルト日付（昨日）で睡眠データを取得する"""
         mock_today.return_value = date(2026, 2, 23)
         oura = MagicMock()
         mock_oura.return_value = oura
         mock_run_sync.side_effect = [
             {"score": 82, "day": "2026-02-22"},  # get_sleep
-            {"total_sleep_duration": 25200},       # get_sleep_details
+            {"total_sleep_duration": 25200},  # get_sleep_details
         ]
         mock_format.return_value = {"title": "睡眠", "description": "テスト"}
         mock_embed.return_value = MagicMock(spec=discord.Embed)
@@ -75,9 +73,7 @@ class TestSleepCommand:
     @patch("cogs.health.run_sync")
     @patch("cogs.health.get_oura_client")
     @patch("cogs.health.get_jst_today")
-    async def test_sleep_multi_day(
-        self, mock_today, mock_oura, mock_run_sync, mock_format, mock_embed
-    ):
+    async def test_sleep_multi_day(self, mock_today, mock_oura, mock_run_sync, mock_format, mock_embed):
         """数字入力で複数日取得パスに入る"""
         mock_today.return_value = date(2026, 2, 23)
         oura = MagicMock()
@@ -141,16 +137,14 @@ class TestReadinessCommand:
     @patch("cogs.health.run_sync")
     @patch("cogs.health.get_oura_client")
     @patch("cogs.health.get_jst_today")
-    async def test_readiness_with_hrv(
-        self, mock_today, mock_oura, mock_run_sync, mock_format, mock_embed
-    ):
+    async def test_readiness_with_hrv(self, mock_today, mock_oura, mock_run_sync, mock_format, mock_embed):
         """HRVデータありの場合にHRVフィールドが追加される"""
         mock_today.return_value = date(2026, 2, 23)
         oura = MagicMock()
         mock_oura.return_value = oura
         mock_run_sync.side_effect = [
             {"score": 78, "day": "2026-02-23"},  # get_readiness
-            {"average_hrv": 45.3},                 # get_sleep_details
+            {"average_hrv": 45.3},  # get_sleep_details
         ]
         mock_format.return_value = {"title": "Readiness", "description": "テスト"}
         embed_mock = MagicMock(spec=discord.Embed)
@@ -172,16 +166,14 @@ class TestReadinessCommand:
     @patch("cogs.health.run_sync")
     @patch("cogs.health.get_oura_client")
     @patch("cogs.health.get_jst_today")
-    async def test_readiness_without_hrv(
-        self, mock_today, mock_oura, mock_run_sync, mock_format, mock_embed
-    ):
+    async def test_readiness_without_hrv(self, mock_today, mock_oura, mock_run_sync, mock_format, mock_embed):
         """HRVデータなしの場合にHRVフィールドは追加されない"""
         mock_today.return_value = date(2026, 2, 23)
         oura = MagicMock()
         mock_oura.return_value = oura
         mock_run_sync.side_effect = [
             {"score": 78, "day": "2026-02-23"},  # get_readiness
-            None,                                   # get_sleep_details（なし）
+            None,  # get_sleep_details（なし）
         ]
         mock_format.return_value = {"title": "Readiness", "description": "テスト"}
         embed_mock = MagicMock(spec=discord.Embed)
@@ -228,9 +220,7 @@ class TestActivityCommand:
     @patch("cogs.health.run_sync")
     @patch("cogs.health.get_oura_client")
     @patch("cogs.health.get_jst_today")
-    async def test_activity_basic(
-        self, mock_today, mock_oura, mock_run_sync, mock_emoji, mock_label
-    ):
+    async def test_activity_basic(self, mock_today, mock_oura, mock_run_sync, mock_emoji, mock_label):
         """活動データが正しくEmbedとして送信される"""
         mock_today.return_value = date(2026, 2, 23)
         oura = MagicMock()
@@ -286,9 +276,7 @@ class TestStepsCommand:
     @patch("cogs.health.run_sync")
     @patch("cogs.health.get_oura_client")
     @patch("cogs.health.get_jst_today")
-    async def test_steps_progress_bar(
-        self, mock_today, mock_oura, mock_run_sync, mock_settings
-    ):
+    async def test_steps_progress_bar(self, mock_today, mock_oura, mock_run_sync, mock_settings):
         """歩数進捗バーが正しく計算される"""
         mock_today.return_value = date(2026, 2, 23)
         oura = MagicMock()
@@ -313,9 +301,7 @@ class TestStepsCommand:
     @patch("cogs.health.run_sync")
     @patch("cogs.health.get_oura_client")
     @patch("cogs.health.get_jst_today")
-    async def test_steps_goal_achieved(
-        self, mock_today, mock_oura, mock_run_sync, mock_settings
-    ):
+    async def test_steps_goal_achieved(self, mock_today, mock_oura, mock_run_sync, mock_settings):
         """目標達成時に「あと」フィールドが表示されない"""
         mock_today.return_value = date(2026, 2, 23)
         oura = MagicMock()
@@ -338,9 +324,7 @@ class TestStepsCommand:
     @patch("cogs.health.run_sync")
     @patch("cogs.health.get_oura_client")
     @patch("cogs.health.get_jst_today")
-    async def test_steps_zero_goal(
-        self, mock_today, mock_oura, mock_run_sync, mock_settings
-    ):
+    async def test_steps_zero_goal(self, mock_today, mock_oura, mock_run_sync, mock_settings):
         """目標が0の場合に進捗率が0%になる"""
         mock_today.return_value = date(2026, 2, 23)
         oura = MagicMock()
@@ -476,9 +460,7 @@ class TestWorkoutCommand:
     @patch("cogs.health.run_sync")
     @patch("cogs.health.get_oura_client")
     @patch("cogs.health.get_jst_today")
-    async def test_workout_basic(
-        self, mock_today, mock_oura, mock_run_sync, mock_time_fmt, mock_dur_fmt
-    ):
+    async def test_workout_basic(self, mock_today, mock_oura, mock_run_sync, mock_time_fmt, mock_dur_fmt):
         """ワークアウトデータが正しくEmbedとして送信される"""
         mock_today.return_value = date(2026, 2, 23)
         oura = MagicMock()

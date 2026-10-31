@@ -60,8 +60,7 @@ class SchedulerCog(commands.Cog):
                         if channel:
                             try:
                                 await channel.send(
-                                    ":crescent_moon: そろそろ就寝時間です。\n"
-                                    "画面から目を離して、ゆっくり休みましょう。"
+                                    ":crescent_moon: そろそろ就寝時間です。\n画面から目を離して、ゆっくり休みましょう。"
                                 )
                             except Exception:
                                 logger.warning("就寝リマインダーの送信に失敗しました", exc_info=True)

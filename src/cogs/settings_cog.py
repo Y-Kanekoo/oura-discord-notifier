@@ -20,17 +20,14 @@ class SettingsCog(commands.Cog):
     async def goal_command(self, interaction: discord.Interaction, value: int):
         """歩数目標を変更"""
         if value < 1000 or value > 100000:
-            await interaction.response.send_message(
-                ":x: 歩数目標は 1,000 〜 100,000 の範囲で設定してください"
-            )
+            await interaction.response.send_message(":x: 歩数目標は 1,000 〜 100,000 の範囲で設定してください")
             return
 
         old_goal = settings.get_steps_goal()
         settings.set_steps_goal(value)
 
         await interaction.response.send_message(
-            f":white_check_mark: 歩数目標を変更しました\n"
-            f"**{old_goal:,}** → **{value:,}** 歩"
+            f":white_check_mark: 歩数目標を変更しました\n**{old_goal:,}** → **{value:,}** 歩"
         )
 
     @app_commands.command(name="settings", description="現在の設定を表示します")
@@ -96,7 +93,9 @@ class SettingsCog(commands.Cog):
     ):
         """就寝リマインダー設定"""
         try:
-            channel_id = (channel or interaction.channel).id if interaction.channel else (channel.id if channel else None)
+            channel_id = (
+                (channel or interaction.channel).id if interaction.channel else (channel.id if channel else None)
+            )
             if channel_id is None:
                 await interaction.response.send_message(":x: チャンネルを特定できませんでした")
                 return
@@ -136,7 +135,9 @@ class SettingsCog(commands.Cog):
     ):
         """目標達成通知の設定"""
         try:
-            channel_id = (channel or interaction.channel).id if interaction.channel else (channel.id if channel else None)
+            channel_id = (
+                (channel or interaction.channel).id if interaction.channel else (channel.id if channel else None)
+            )
             if channel_id is None:
                 await interaction.response.send_message(":x: チャンネルを特定できませんでした")
                 return
@@ -148,8 +149,7 @@ class SettingsCog(commands.Cog):
             status = "有効" if enabled else "無効"
 
             await interaction.response.send_message(
-                f":white_check_mark: 目標達成通知を{status}にしました\n"
-                f"チャンネル: <#{channel_id}>"
+                f":white_check_mark: 目標達成通知を{status}にしました\nチャンネル: <#{channel_id}>"
             )
 
         except Exception as e:

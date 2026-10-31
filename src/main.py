@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 # .envファイルの読み込み（存在する場合のみ）
 try:
     from dotenv import load_dotenv
+
     env_path = Path(__file__).parent.parent / ".env"
     if env_path.exists():
         load_dotenv(env_path)
@@ -37,6 +38,7 @@ from oura_client import OuraClient  # noqa: E402
 
 # デフォルト設定
 DEFAULT_STEPS_GOAL = 8000
+
 
 def _report_error(discord: DiscordClient | None, slot: str, error: Exception) -> bool:
     """固定通知を最大1回試みる. 追加通知が失敗しても再帰しない."""
@@ -70,6 +72,7 @@ def get_jst_hour() -> int:
 # =============================================================================
 # 朝通知
 # =============================================================================
+
 
 def send_morning_report() -> bool:
     """朝通知：睡眠 + Readiness + 今日の方針"""
@@ -106,8 +109,12 @@ def send_morning_report() -> bool:
         # 前日データを取得（比較用）
         logger.info("前日データを取得中（比較用）")
         prev_data = {
-            "sleep": oura.get_sleep(yesterday) if data["sleep"] and data["sleep"].get("day") == today.isoformat() else oura.get_sleep(two_days_ago),
-            "readiness": oura.get_readiness(yesterday) if data["readiness"] and data["readiness"].get("day") == today.isoformat() else oura.get_readiness(two_days_ago),
+            "sleep": oura.get_sleep(yesterday)
+            if data["sleep"] and data["sleep"].get("day") == today.isoformat()
+            else oura.get_sleep(two_days_ago),
+            "readiness": oura.get_readiness(yesterday)
+            if data["readiness"] and data["readiness"].get("day") == today.isoformat()
+            else oura.get_readiness(two_days_ago),
         }
 
         # 週間平均を取得
@@ -139,6 +146,7 @@ def send_morning_report() -> bool:
 # =============================================================================
 # 昼通知
 # =============================================================================
+
 
 def send_noon_report() -> bool:
     """昼通知：活動進捗 + 睡眠サマリー（朝に取れなかった場合の補完）"""
@@ -193,6 +201,7 @@ def send_noon_report() -> bool:
 # =============================================================================
 # 夜通知
 # =============================================================================
+
 
 def send_night_report() -> bool:
     """夜通知：今日の結果 + 減速リマインダー"""
@@ -256,6 +265,7 @@ def send_night_report() -> bool:
 # メイン
 # =============================================================================
 
+
 def main():
     """メイン関数"""
     import argparse
@@ -281,8 +291,7 @@ def main():
         discord = DiscordClient(discord_webhook)
         try:
             success = discord.send_message(
-                ":white_check_mark: **テスト成功！**\n"
-                "Oura Discord Notifierが正常に動作しています。"
+                ":white_check_mark: **テスト成功！**\nOura Discord Notifierが正常に動作しています。"
             )
         except Exception as exc:
             logger.error("%s", safe_diagnostic(exc, provider="discord", operation="send"))

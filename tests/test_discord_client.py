@@ -70,6 +70,7 @@ class TestDiscordClientPost:
     def test_request_exception_returns_none(self, mock_post):
         """RequestExceptionで全リトライ失敗時はNoneを返す"""
         import requests
+
         mock_post.side_effect = requests.RequestException("connection error")
 
         result = self.client._post({"content": "test"})
@@ -167,9 +168,11 @@ class TestDiscordClientSendHealthReport:
 
         sections = [
             {"title": "睡眠", "description": "スコア: 82", "color": 0x9B59B6},
-            {"title": "活動", "description": "歩数: 9,500", "fields": [
-                {"name": "目標", "value": "8,000歩", "inline": True}
-            ]},
+            {
+                "title": "活動",
+                "description": "歩数: 9,500",
+                "fields": [{"name": "目標", "value": "8,000歩", "inline": True}],
+            },
         ]
 
         result = self.client.send_health_report("朝レポート", sections)

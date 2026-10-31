@@ -58,9 +58,15 @@ class DiscordClient:
                     continue
 
                 if response.status_code != 204:
-                    logger.warning("%s", safe_diagnostic(
-                        provider="discord", operation="send", status=response.status_code, attempt=attempt,
-                    ))
+                    logger.warning(
+                        "%s",
+                        safe_diagnostic(
+                            provider="discord",
+                            operation="send",
+                            status=response.status_code,
+                            attempt=attempt,
+                        ),
+                    )
                 return response
             except requests.RequestException as exc:
                 if attempt < self.max_retries:
@@ -147,7 +153,7 @@ class DiscordClient:
 
         success = True
         for index in range(0, len(sections), 10):
-            chunk = sections[index:index + 10]
+            chunk = sections[index : index + 10]
             embeds = [build_embed(section) for section in chunk]
             payload = {
                 "username": "Oura Ring Bot",

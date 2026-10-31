@@ -48,6 +48,7 @@ _oura_client: Optional[OuraClient] = None
 def get_jst_now():
     """JSTの現在時刻を取得"""
     from datetime import datetime
+
     return datetime.now(JST)
 
 

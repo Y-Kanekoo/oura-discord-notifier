@@ -32,9 +32,7 @@ class HealthCog(commands.Cog):
         self.bot = bot
 
     @app_commands.command(name="sleep", description="睡眠スコアを表示します")
-    @app_commands.describe(
-        date_str="日付（例: 昨日, 1/1, 01-02）または日数（例: 3 = 直近3日間）省略時は昨日"
-    )
+    @app_commands.describe(date_str="日付（例: 昨日, 1/1, 01-02）または日数（例: 3 = 直近3日間）省略時は昨日")
     async def sleep_command(self, interaction: discord.Interaction, date_str: Optional[str] = None):
         """睡眠データを表示（複数日表示対応）"""
         await interaction.response.defer()
@@ -63,7 +61,7 @@ class HealthCog(commands.Cog):
                 if embeds:
                     await interaction.followup.send(
                         content=f":zzz: **直近{days}日間の睡眠データ**",
-                        embeds=embeds[:10]  # Discord は最大10 embeds
+                        embeds=embeds[:10],  # Discord は最大10 embeds
                     )
                 else:
                     await interaction.followup.send(":warning: 睡眠データがありません")
