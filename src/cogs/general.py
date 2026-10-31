@@ -28,31 +28,25 @@ PATTERNS = [
     (r"(睡眠|スリープ|ねむ|眠り|寝).*(スコア|点|どう|は[？?])", "sleep"),
     (r"(昨日|きのう|前日).*(睡眠|寝)", "sleep"),
     (r"よく(眠|寝)れた", "sleep"),
-
     # Readiness関連
     (r"(レディネス|readiness|準備|準備度|コンディション)", "readiness"),
     (r"(調子|体調).*(どう|は[？?])", "readiness"),
-
     # 歩数・活動関連
     (r"(歩数|ほすう|あるい|歩い).*(何歩|どれくらい|どう|は[？?])", "steps"),
     (r"(今日|きょう)の?(歩数|あるい)", "steps"),
     (r"(活動|アクティビティ)", "activity"),
-
     # レポート要求
     (r"(朝|モーニング).*(レポート|報告|通知|送)", "report_morning"),
     (r"(昼|ランチ|noon).*(レポート|報告|通知|送)", "report_noon"),
     (r"(夜|ナイト|night).*(レポート|報告|通知|送)", "report_night"),
     (r"レポート.*(送|見せ|教え)", "report_morning"),
-
     # 設定変更
     (r"(歩数|ステップ).*目標.*(\d+)", "set_goal"),
     (r"目標.*(\d+).*(歩|ステップ)", "set_goal"),
-
     # アドバイス
     (r"(今日|きょう).*(どう|アドバイス|何).*(すれば|したら|いい)", "advice"),
     (r"(おすすめ|オススメ|推奨|アドバイス)", "advice"),
     (r"どうすればいい", "advice"),
-
     # ヘルプ
     (r"(ヘルプ|help|使い方|できること)", "help"),
 ]
@@ -113,10 +107,7 @@ class GeneralCog(commands.Cog):
 
         embed.add_field(
             name=":speech_balloon: 自然言語",
-            value=(
-                "ボットにメンションして話しかけることもできます。\n"
-                "例: `@OuraBot 睡眠スコアは？`"
-            ),
+            value=("ボットにメンションして話しかけることもできます。\n例: `@OuraBot 睡眠スコアは？`"),
             inline=False,
         )
 
@@ -196,9 +187,7 @@ class GeneralCog(commands.Cog):
                 steps = activity.get("steps", 0)
                 goal = settings.get_steps_goal()
                 progress = (steps / goal * 100) if goal > 0 else 0
-                await message.reply(
-                    f":footprints: 今日の歩数: **{steps:,}** / {goal:,} 歩 ({progress:.0f}%)"
-                )
+                await message.reply(f":footprints: 今日の歩数: **{steps:,}** / {goal:,} 歩 ({progress:.0f}%)")
 
             elif handler_type == "activity":
                 activity = await run_sync(oura.get_activity, get_jst_today())
@@ -208,8 +197,7 @@ class GeneralCog(commands.Cog):
                 score = activity.get("score", 0)
                 steps = activity.get("steps", 0)
                 await message.reply(
-                    f":running: 活動スコア: **{score}** {get_score_emoji(score)}\n"
-                    f":footprints: 歩数: {steps:,} 歩"
+                    f":running: 活動スコア: **{score}** {get_score_emoji(score)}\n:footprints: 歩数: {steps:,} 歩"
                 )
 
             elif handler_type == "report_morning":
@@ -249,8 +237,7 @@ class GeneralCog(commands.Cog):
                         old_goal = settings.get_steps_goal()
                         settings.set_steps_goal(new_goal)
                         await message.reply(
-                            f":white_check_mark: 歩数目標を変更しました！\n"
-                            f"**{old_goal:,}** → **{new_goal:,}** 歩"
+                            f":white_check_mark: 歩数目標を変更しました！\n**{old_goal:,}** → **{new_goal:,}** 歩"
                         )
                     else:
                         await message.reply(":x: 1,000〜100,000の範囲で指定してください")

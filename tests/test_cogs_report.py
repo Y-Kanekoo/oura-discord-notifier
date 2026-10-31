@@ -47,9 +47,7 @@ class TestReportCommand:
     @patch("cogs.report.run_sync")
     @patch("cogs.report.get_oura_client")
     @patch("cogs.report.get_jst_today")
-    async def test_report_morning(
-        self, mock_today, mock_oura, mock_run_sync, mock_format, mock_embed
-    ):
+    async def test_report_morning(self, mock_today, mock_oura, mock_run_sync, mock_format, mock_embed):
         """朝レポートが正しく送信される"""
         mock_today.return_value = date(2026, 2, 23)
         oura = MagicMock()
@@ -87,8 +85,8 @@ class TestReportCommand:
         mock_oura.return_value = oura
         mock_run_sync.side_effect = [
             {"steps": 3000},  # get_activity
-            {"score": 80},     # get_sleep
-            {},                 # get_sleep_details
+            {"score": 80},  # get_sleep
+            {},  # get_sleep_details
         ]
         mock_settings.get_steps_goal.return_value = 10000
         mock_format.return_value = (
@@ -113,17 +111,15 @@ class TestReportCommand:
     @patch("cogs.report.run_sync")
     @patch("cogs.report.get_oura_client")
     @patch("cogs.report.get_jst_today")
-    async def test_report_noon_no_send(
-        self, mock_today, mock_oura, mock_run_sync, mock_settings, mock_format
-    ):
+    async def test_report_noon_no_send(self, mock_today, mock_oura, mock_run_sync, mock_settings, mock_format):
         """昼レポートでshouldSend=Falseの場合は「順調」メッセージを返す"""
         mock_today.return_value = date(2026, 2, 23)
         oura = MagicMock()
         mock_oura.return_value = oura
         mock_run_sync.side_effect = [
             {"steps": 8000},  # get_activity
-            {"score": 90},     # get_sleep
-            {},                 # get_sleep_details
+            {"score": 90},  # get_sleep
+            {},  # get_sleep_details
         ]
         mock_settings.get_steps_goal.return_value = 10000
         mock_format.return_value = ("昼レポート", [], False)
@@ -142,17 +138,15 @@ class TestReportCommand:
     @patch("cogs.report.run_sync")
     @patch("cogs.report.get_oura_client")
     @patch("cogs.report.get_jst_today")
-    async def test_report_night(
-        self, mock_today, mock_oura, mock_run_sync, mock_format, mock_embed
-    ):
+    async def test_report_night(self, mock_today, mock_oura, mock_run_sync, mock_format, mock_embed):
         """夜レポートが正しく送信される"""
         mock_today.return_value = date(2026, 2, 23)
         oura = MagicMock()
         mock_oura.return_value = oura
         mock_run_sync.side_effect = [
-            {"score": 78},   # get_readiness
-            {"score": 80},   # get_sleep
-            {"steps": 9000}, # get_activity
+            {"score": 78},  # get_readiness
+            {"score": 80},  # get_sleep
+            {"steps": 9000},  # get_activity
         ]
         mock_format.return_value = (
             "夜レポート",
@@ -198,17 +192,15 @@ class TestAdviceCommand:
     @patch("cogs.report.run_sync")
     @patch("cogs.report.get_oura_client")
     @patch("cogs.report.get_jst_today")
-    async def test_advice_basic(
-        self, mock_today, mock_oura, mock_run_sync, mock_settings, mock_advice
-    ):
+    async def test_advice_basic(self, mock_today, mock_oura, mock_run_sync, mock_settings, mock_advice):
         """アドバイスコマンドが正しくEmbedを送信する"""
         mock_today.return_value = date(2026, 2, 23)
         oura = MagicMock()
         mock_oura.return_value = oura
         mock_run_sync.side_effect = [
-            {"score": 78},                   # get_readiness
-            {"score": 82},                   # get_sleep
-            {"score": 85, "steps": 9000},    # get_activity
+            {"score": 78},  # get_readiness
+            {"score": 82},  # get_sleep
+            {"score": 85, "steps": 9000},  # get_activity
         ]
         mock_settings.get_steps_goal.return_value = 10000
         mock_advice.return_value = "今日は軽い運動がおすすめです。"
@@ -230,9 +222,7 @@ class TestAdviceCommand:
     @patch("cogs.report.run_sync")
     @patch("cogs.report.get_oura_client")
     @patch("cogs.report.get_jst_today")
-    async def test_advice_no_data(
-        self, mock_today, mock_oura, mock_run_sync, mock_settings, mock_advice
-    ):
+    async def test_advice_no_data(self, mock_today, mock_oura, mock_run_sync, mock_settings, mock_advice):
         """データなしでもアドバイスが生成される"""
         mock_today.return_value = date(2026, 2, 23)
         oura = MagicMock()
@@ -373,9 +363,7 @@ class TestMonthCommand:
     @patch("cogs.report.run_sync")
     @patch("cogs.report.get_oura_client")
     @patch("cogs.report.get_jst_today")
-    async def test_month_days_clamped_min(
-        self, mock_today, mock_oura, mock_run_sync, mock_settings
-    ):
+    async def test_month_days_clamped_min(self, mock_today, mock_oura, mock_run_sync, mock_settings):
         """days が最小値（7）にクランプされる"""
         mock_today.return_value = date(2026, 2, 23)
         oura = MagicMock()
@@ -405,9 +393,7 @@ class TestMonthCommand:
     @patch("cogs.report.run_sync")
     @patch("cogs.report.get_oura_client")
     @patch("cogs.report.get_jst_today")
-    async def test_month_days_clamped_max(
-        self, mock_today, mock_oura, mock_run_sync, mock_settings
-    ):
+    async def test_month_days_clamped_max(self, mock_today, mock_oura, mock_run_sync, mock_settings):
         """days が最大値（90）にクランプされる"""
         mock_today.return_value = date(2026, 2, 23)
         oura = MagicMock()
@@ -446,9 +432,7 @@ class TestGraphCommand:
     @patch("cogs.report.run_sync")
     @patch("cogs.report.get_oura_client")
     @patch("cogs.report.get_jst_today")
-    async def test_graph_combined(
-        self, mock_today, mock_oura, mock_run_sync, mock_settings, mock_chart
-    ):
+    async def test_graph_combined(self, mock_today, mock_oura, mock_run_sync, mock_settings, mock_chart):
         """combined グラフタイプが正しく生成される"""
         import io
 
@@ -471,9 +455,7 @@ class TestGraphCommand:
         cog = ReportCog(bot)
         interaction = _make_interaction()
 
-        await cog.graph_command.callback(
-            cog, interaction, graph_type="combined", days=14
-        )
+        await cog.graph_command.callback(cog, interaction, graph_type="combined", days=14)
 
         mock_chart.assert_called_once()
         interaction.followup.send.assert_called_once()
@@ -485,9 +467,7 @@ class TestGraphCommand:
     @patch("cogs.report.run_sync")
     @patch("cogs.report.get_oura_client")
     @patch("cogs.report.get_jst_today")
-    async def test_graph_scores(
-        self, mock_today, mock_oura, mock_run_sync, mock_settings, mock_chart
-    ):
+    async def test_graph_scores(self, mock_today, mock_oura, mock_run_sync, mock_settings, mock_chart):
         """scores グラフタイプが正しく生成される"""
         import io
 
@@ -510,9 +490,7 @@ class TestGraphCommand:
         cog = ReportCog(bot)
         interaction = _make_interaction()
 
-        await cog.graph_command.callback(
-            cog, interaction, graph_type="scores", days=14
-        )
+        await cog.graph_command.callback(cog, interaction, graph_type="scores", days=14)
 
         mock_chart.assert_called_once()
         interaction.followup.send.assert_called_once()
@@ -522,9 +500,7 @@ class TestGraphCommand:
     @patch("cogs.report.run_sync")
     @patch("cogs.report.get_oura_client")
     @patch("cogs.report.get_jst_today")
-    async def test_graph_steps(
-        self, mock_today, mock_oura, mock_run_sync, mock_settings, mock_chart
-    ):
+    async def test_graph_steps(self, mock_today, mock_oura, mock_run_sync, mock_settings, mock_chart):
         """steps グラフタイプが正しく生成される"""
         import io
 
@@ -547,9 +523,7 @@ class TestGraphCommand:
         cog = ReportCog(bot)
         interaction = _make_interaction()
 
-        await cog.graph_command.callback(
-            cog, interaction, graph_type="steps", days=14
-        )
+        await cog.graph_command.callback(cog, interaction, graph_type="steps", days=14)
 
         mock_chart.assert_called_once()
         interaction.followup.send.assert_called_once()
@@ -558,9 +532,7 @@ class TestGraphCommand:
     @patch("cogs.report.run_sync")
     @patch("cogs.report.get_oura_client")
     @patch("cogs.report.get_jst_today")
-    async def test_graph_no_data(
-        self, mock_today, mock_oura, mock_run_sync, mock_settings
-    ):
+    async def test_graph_no_data(self, mock_today, mock_oura, mock_run_sync, mock_settings):
         """データなしの場合に警告メッセージを返す"""
         mock_today.return_value = date(2026, 2, 23)
         oura = MagicMock()
@@ -580,9 +552,7 @@ class TestGraphCommand:
         cog = ReportCog(bot)
         interaction = _make_interaction()
 
-        await cog.graph_command.callback(
-            cog, interaction, graph_type="combined", days=14
-        )
+        await cog.graph_command.callback(cog, interaction, graph_type="combined", days=14)
 
         assert "データがありません" in str(interaction.followup.send.call_args)
 
@@ -593,8 +563,6 @@ class TestGraphCommand:
         interaction = _make_interaction()
 
         with patch("cogs.report.get_oura_client", side_effect=Exception("テストエラー")):
-            await cog.graph_command.callback(
-                cog, interaction, graph_type="combined", days=14
-            )
+            await cog.graph_command.callback(cog, interaction, graph_type="combined", days=14)
 
         assert "エラーが発生しました" in str(interaction.followup.send.call_args)

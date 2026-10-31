@@ -15,7 +15,7 @@ except OSError:
 
 import matplotlib  # noqa: E402
 
-matplotlib.use('Agg')  # GUIバックエンドを使用しない
+matplotlib.use("Agg")  # GUIバックエンドを使用しない
 import matplotlib.dates as mdates  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib.ticker import FuncFormatter  # noqa: E402
@@ -37,12 +37,12 @@ def _get_japanese_font_families() -> list[str]:
 
 
 # 日本語フォント設定（クロスプラットフォーム対応）
-plt.rcParams['font.family'] = _get_japanese_font_families()
-plt.rcParams['axes.unicode_minus'] = False
+plt.rcParams["font.family"] = _get_japanese_font_families()
+plt.rcParams["axes.unicode_minus"] = False
 
 # Discordダークテーマの配色定数
-_BG_COLOR = '#2C2F33'
-_LEGEND_BG = '#23272A'
+_BG_COLOR = "#2C2F33"
+_LEGEND_BG = "#23272A"
 
 
 def _setup_chart_style(fig, *axes):
@@ -50,16 +50,16 @@ def _setup_chart_style(fig, *axes):
     fig.patch.set_facecolor(_BG_COLOR)
     for ax in axes:
         ax.set_facecolor(_BG_COLOR)
-        ax.tick_params(colors='white')
+        ax.tick_params(colors="white")
         for spine in ax.spines.values():
-            spine.set_color('white')
+            spine.set_color("white")
 
 
 def _save_chart(fig) -> io.BytesIO:
     """グラフをPNGバイトストリームとして保存"""
     plt.tight_layout()
     buf = io.BytesIO()
-    fig.savefig(buf, format='png', dpi=150, facecolor=fig.get_facecolor())
+    fig.savefig(buf, format="png", dpi=150, facecolor=fig.get_facecolor())
     buf.seek(0)
     plt.close(fig)
     return buf
@@ -107,29 +107,29 @@ def generate_score_chart(
         valid_dates = [d for d, s in zip(dates, sleep_scores) if s is not None]
         valid_scores = [s for s in sleep_scores if s is not None]
         if valid_scores:
-            ax.plot(valid_dates, valid_scores, 'o-', color='#9B59B6', label='睡眠', linewidth=2, markersize=4)
+            ax.plot(valid_dates, valid_scores, "o-", color="#9B59B6", label="睡眠", linewidth=2, markersize=4)
 
     if show_readiness:
         valid_dates = [d for d, s in zip(dates, readiness_scores) if s is not None]
         valid_scores = [s for s in readiness_scores if s is not None]
         if valid_scores:
-            ax.plot(valid_dates, valid_scores, 's-', color='#3498DB', label='Readiness', linewidth=2, markersize=4)
+            ax.plot(valid_dates, valid_scores, "s-", color="#3498DB", label="Readiness", linewidth=2, markersize=4)
 
     if show_activity:
         valid_dates = [d for d, s in zip(dates, activity_scores) if s is not None]
         valid_scores = [s for s in activity_scores if s is not None]
         if valid_scores:
-            ax.plot(valid_dates, valid_scores, '^-', color='#2ECC71', label='活動', linewidth=2, markersize=4)
+            ax.plot(valid_dates, valid_scores, "^-", color="#2ECC71", label="活動", linewidth=2, markersize=4)
 
     # 基準線
-    ax.axhline(y=85, color='#27AE60', linestyle='--', alpha=0.5, linewidth=1)
-    ax.axhline(y=70, color='#F39C12', linestyle='--', alpha=0.5, linewidth=1)
+    ax.axhline(y=85, color="#27AE60", linestyle="--", alpha=0.5, linewidth=1)
+    ax.axhline(y=70, color="#F39C12", linestyle="--", alpha=0.5, linewidth=1)
 
     # 軸の設定
     ax.set_ylim(40, 100)
-    ax.set_ylabel('スコア', color='white', fontsize=12)
-    ax.set_xlabel('日付', color='white', fontsize=12)
-    ax.set_title(title, color='white', fontsize=14, fontweight='bold')
+    ax.set_ylabel("スコア", color="white", fontsize=12)
+    ax.set_xlabel("日付", color="white", fontsize=12)
+    ax.set_title(title, color="white", fontsize=14, fontweight="bold")
 
     # 目盛りの設定
     ax.xaxis.set_major_formatter(_DATE_FORMATTER)
@@ -137,10 +137,10 @@ def generate_score_chart(
     plt.xticks(rotation=45)
 
     # グリッド
-    ax.grid(True, alpha=0.3, color='white')
+    ax.grid(True, alpha=0.3, color="white")
 
     # 凡例
-    ax.legend(loc='upper left', facecolor=_LEGEND_BG, edgecolor='white', labelcolor='white')
+    ax.legend(loc="upper left", facecolor=_LEGEND_BG, edgecolor="white", labelcolor="white")
 
     return _save_chart(fig)
 
@@ -180,18 +180,18 @@ def generate_steps_chart(
 
     if valid_steps:
         # 目標達成/未達成で色分け
-        colors = ['#2ECC71' if s >= goal else '#E74C3C' for s in valid_steps]
+        colors = ["#2ECC71" if s >= goal else "#E74C3C" for s in valid_steps]
         ax.bar(valid_dates, valid_steps, color=colors, alpha=0.8, width=0.8)
 
         # 目標ライン
-        ax.axhline(y=goal, color='#F39C12', linestyle='--', linewidth=2, label=f'目標: {goal:,}歩')
+        ax.axhline(y=goal, color="#F39C12", linestyle="--", linewidth=2, label=f"目標: {goal:,}歩")
 
     # 軸の設定
     max_steps = max(valid_steps) if valid_steps else goal
     ax.set_ylim(0, max(max_steps * 1.1, goal * 1.2))
-    ax.set_ylabel('歩数', color='white', fontsize=12)
-    ax.set_xlabel('日付', color='white', fontsize=12)
-    ax.set_title(title, color='white', fontsize=14, fontweight='bold')
+    ax.set_ylabel("歩数", color="white", fontsize=12)
+    ax.set_xlabel("日付", color="white", fontsize=12)
+    ax.set_title(title, color="white", fontsize=14, fontweight="bold")
 
     # 目盛りの設定
     ax.xaxis.set_major_formatter(_DATE_FORMATTER)
@@ -199,13 +199,13 @@ def generate_steps_chart(
     plt.xticks(rotation=45)
 
     # Y軸のフォーマット（カンマ区切り）
-    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{int(x):,}'))
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f"{int(x):,}"))
 
     # グリッド
-    ax.grid(True, alpha=0.3, color='white', axis='y')
+    ax.grid(True, alpha=0.3, color="white", axis="y")
 
     # 凡例
-    ax.legend(loc='upper right', facecolor=_LEGEND_BG, edgecolor='white', labelcolor='white')
+    ax.legend(loc="upper right", facecolor=_LEGEND_BG, edgecolor="white", labelcolor="white")
 
     return _save_chart(fig)
 
@@ -249,23 +249,23 @@ def generate_combined_chart(
     valid_dates = [d for d, s in zip(dates, sleep_scores) if s is not None]
     valid_scores = [s for s in sleep_scores if s is not None]
     if valid_scores:
-        ax1.plot(valid_dates, valid_scores, 'o-', color='#9B59B6', label='睡眠', linewidth=2, markersize=3)
+        ax1.plot(valid_dates, valid_scores, "o-", color="#9B59B6", label="睡眠", linewidth=2, markersize=3)
 
     # Readinessスコア
     valid_dates = [d for d, s in zip(dates, readiness_scores) if s is not None]
     valid_scores = [s for s in readiness_scores if s is not None]
     if valid_scores:
-        ax1.plot(valid_dates, valid_scores, 's-', color='#3498DB', label='Readiness', linewidth=2, markersize=3)
+        ax1.plot(valid_dates, valid_scores, "s-", color="#3498DB", label="Readiness", linewidth=2, markersize=3)
 
-    ax1.axhline(y=85, color='#27AE60', linestyle='--', alpha=0.5, linewidth=1)
-    ax1.axhline(y=70, color='#F39C12', linestyle='--', alpha=0.5, linewidth=1)
+    ax1.axhline(y=85, color="#27AE60", linestyle="--", alpha=0.5, linewidth=1)
+    ax1.axhline(y=70, color="#F39C12", linestyle="--", alpha=0.5, linewidth=1)
     ax1.set_ylim(40, 100)
-    ax1.set_ylabel('スコア', color='white', fontsize=10)
-    ax1.set_title(title, color='white', fontsize=14, fontweight='bold')
+    ax1.set_ylabel("スコア", color="white", fontsize=10)
+    ax1.set_title(title, color="white", fontsize=14, fontweight="bold")
     ax1.xaxis.set_major_formatter(_DATE_FORMATTER)
     ax1.xaxis.set_major_locator(mdates.DayLocator(interval=max(1, len(dates) // 8)))
-    ax1.grid(True, alpha=0.3, color='white')
-    ax1.legend(loc='upper left', facecolor=_LEGEND_BG, edgecolor='white', labelcolor='white', fontsize=9)
+    ax1.grid(True, alpha=0.3, color="white")
+    ax1.legend(loc="upper left", facecolor=_LEGEND_BG, edgecolor="white", labelcolor="white", fontsize=9)
 
     # === 下段: 歩数推移 ===
 
@@ -273,19 +273,19 @@ def generate_combined_chart(
     valid_steps = [s for s in steps_list if s is not None]
 
     if valid_steps:
-        colors = ['#2ECC71' if s >= goal else '#E74C3C' for s in valid_steps]
+        colors = ["#2ECC71" if s >= goal else "#E74C3C" for s in valid_steps]
         ax2.bar(valid_dates, valid_steps, color=colors, alpha=0.8, width=0.8)
-        ax2.axhline(y=goal, color='#F39C12', linestyle='--', linewidth=2, label=f'目標: {goal:,}歩')
+        ax2.axhline(y=goal, color="#F39C12", linestyle="--", linewidth=2, label=f"目標: {goal:,}歩")
 
     max_steps = max(valid_steps) if valid_steps else goal
     ax2.set_ylim(0, max(max_steps * 1.1, goal * 1.2))
-    ax2.set_ylabel('歩数', color='white', fontsize=10)
-    ax2.set_xlabel('日付', color='white', fontsize=10)
+    ax2.set_ylabel("歩数", color="white", fontsize=10)
+    ax2.set_xlabel("日付", color="white", fontsize=10)
     ax2.xaxis.set_major_formatter(_DATE_FORMATTER)
     ax2.xaxis.set_major_locator(mdates.DayLocator(interval=max(1, len(dates) // 8)))
-    ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{int(x):,}'))
-    ax2.grid(True, alpha=0.3, color='white', axis='y')
-    ax2.legend(loc='upper right', facecolor=_LEGEND_BG, edgecolor='white', labelcolor='white', fontsize=9)
+    ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f"{int(x):,}"))
+    ax2.grid(True, alpha=0.3, color="white", axis="y")
+    ax2.legend(loc="upper right", facecolor=_LEGEND_BG, edgecolor="white", labelcolor="white", fontsize=9)
 
     plt.xticks(rotation=45)
 

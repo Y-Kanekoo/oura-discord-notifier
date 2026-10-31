@@ -203,9 +203,7 @@ class TestFormatMorningReport:
 class TestFormatNoonReport:
     def test_behind_pace(self, sample_sleep_data, sample_sleep_details):
         activity = {"steps": 1000, "score": 30}
-        title, sections, should_send = format_noon_report(
-            activity, 8000, 13, sample_sleep_data, sample_sleep_details
-        )
+        title, sections, should_send = format_noon_report(activity, 8000, 13, sample_sleep_data, sample_sleep_details)
         assert should_send is True
 
     def test_on_pace(self):
@@ -220,9 +218,7 @@ class TestFormatNoonReport:
 
 class TestFormatNightReport:
     def test_basic(self, sample_readiness_data, sample_sleep_data, sample_activity_data):
-        title, sections = format_night_report(
-            sample_readiness_data, sample_sleep_data, sample_activity_data
-        )
+        title, sections = format_night_report(sample_readiness_data, sample_sleep_data, sample_activity_data)
         assert "おつかれ" in title
         assert len(sections) >= 1
 

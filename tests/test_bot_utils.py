@@ -129,6 +129,7 @@ class TestParseTimeStr:
 
     def test_invalid_format(self):
         import pytest
+
         with pytest.raises(ValueError, match="HH:MM"):
             parse_time_str("abc")
         with pytest.raises(ValueError):
@@ -136,5 +137,6 @@ class TestParseTimeStr:
 
     def test_out_of_range(self):
         import pytest
+
         with pytest.raises(ValueError, match="00:00〜23:59"):
             parse_time_str("24:00")

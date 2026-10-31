@@ -32,11 +32,13 @@ class ReportCog(commands.Cog):
 
     @app_commands.command(name="report", description="レポートを送信します")
     @app_commands.describe(report_type="レポートの種類")
-    @app_commands.choices(report_type=[
-        app_commands.Choice(name="朝レポート（睡眠+Readiness）", value="morning"),
-        app_commands.Choice(name="昼レポート（活動進捗）", value="noon"),
-        app_commands.Choice(name="夜レポート（今日の結果）", value="night"),
-    ])
+    @app_commands.choices(
+        report_type=[
+            app_commands.Choice(name="朝レポート（睡眠+Readiness）", value="morning"),
+            app_commands.Choice(name="昼レポート（活動進捗）", value="noon"),
+            app_commands.Choice(name="夜レポート（今日の結果）", value="night"),
+        ]
+    )
     async def report_command(self, interaction: discord.Interaction, report_type: str = "morning"):
         """レポートを送信"""
         await interaction.response.defer()
@@ -212,7 +214,9 @@ class ReportCog(commands.Cog):
                     diff = cur - prev
                     sign = "+" if diff >= 0 else ""
                     unit = "pt" if key != "steps" else "歩"
-                    trend_lines.append(f"{label}: {cur:.1f} ({sign}{diff:.1f}{unit} vs 先週)") if key != "steps" else trend_lines.append(f"{label}: {cur:.0f} ({sign}{diff:.0f}{unit} vs 先週)")
+                    trend_lines.append(
+                        f"{label}: {cur:.1f} ({sign}{diff:.1f}{unit} vs 先週)"
+                    ) if key != "steps" else trend_lines.append(f"{label}: {cur:.0f} ({sign}{diff:.0f}{unit} vs 先週)")
 
             if trend_lines:
                 embed.add_field(
@@ -247,7 +251,9 @@ class ReportCog(commands.Cog):
             start_date = date.fromisoformat(monthly["start_date"])
             end_date = date.fromisoformat(monthly["end_date"])
 
-            title = f":calendar: {days}日間サマリー ({start_date.month}/{start_date.day} ~ {end_date.month}/{end_date.day})"
+            title = (
+                f":calendar: {days}日間サマリー ({start_date.month}/{start_date.day} ~ {end_date.month}/{end_date.day})"
+            )
 
             embed = discord.Embed(
                 title=title,
@@ -320,11 +326,13 @@ class ReportCog(commands.Cog):
         graph_type="グラフの種類",
         days="集計日数（デフォルト: 14日）",
     )
-    @app_commands.choices(graph_type=[
-        app_commands.Choice(name="スコア推移（睡眠・Readiness・活動）", value="scores"),
-        app_commands.Choice(name="歩数推移", value="steps"),
-        app_commands.Choice(name="総合（スコア＋歩数）", value="combined"),
-    ])
+    @app_commands.choices(
+        graph_type=[
+            app_commands.Choice(name="スコア推移（睡眠・Readiness・活動）", value="scores"),
+            app_commands.Choice(name="歩数推移", value="steps"),
+            app_commands.Choice(name="総合（スコア＋歩数）", value="combined"),
+        ]
+    )
     async def graph_command(
         self,
         interaction: discord.Interaction,

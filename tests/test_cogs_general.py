@@ -205,9 +205,7 @@ class TestOnMessage:
         """認識できないメッセージにはフォールバック返答する"""
         bot = self._make_bot()
         cog = GeneralCog(bot)
-        message = self._make_message(
-            f"<@{bot.user.id}> こんにちは", mention_id=bot.user.id
-        )
+        message = self._make_message(f"<@{bot.user.id}> こんにちは", mention_id=bot.user.id)
 
         await cog.on_message(message)
         message.reply.assert_called_once()
@@ -252,9 +250,7 @@ class TestDispatchHandler:
     @patch("cogs.general.get_oura_client")
     @patch("cogs.general.run_sync")
     @patch("cogs.general.get_jst_today")
-    async def test_steps_handler_with_data(
-        self, mock_today, mock_run_sync, mock_oura, mock_settings
-    ):
+    async def test_steps_handler_with_data(self, mock_today, mock_run_sync, mock_oura, mock_settings):
         """steps ハンドラー: 歩数データありの場合に正しいメッセージを返す"""
         from datetime import date
 
@@ -298,9 +294,7 @@ class TestDispatchHandler:
         cog = GeneralCog(bot)
         message = self._make_message()
 
-        await cog._dispatch_handler(
-            message, "set_goal", "目標を10000歩にして", None
-        )
+        await cog._dispatch_handler(message, "set_goal", "目標を10000歩にして", None)
         mock_settings.set_steps_goal.assert_called_once_with(10000)
         message.reply.assert_called_once()
         reply_text = message.reply.call_args[0][0]
@@ -315,9 +309,7 @@ class TestDispatchHandler:
         cog = GeneralCog(bot)
         message = self._make_message()
 
-        await cog._dispatch_handler(
-            message, "set_goal", "目標を500歩にして", None
-        )
+        await cog._dispatch_handler(message, "set_goal", "目標を500歩にして", None)
         message.reply.assert_called_once()
         assert "1,000〜100,000" in str(message.reply.call_args)
 

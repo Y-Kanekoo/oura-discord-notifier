@@ -1,4 +1,5 @@
 """Issue35: 診断経路の秘匿と既存 payload/失敗伝播を合成データで検証."""
+
 import logging
 from unittest.mock import Mock
 
@@ -71,9 +72,11 @@ def test_report_error_notice_contains_only_safe_diagnostics(monkeypatch, caplog,
     error.__cause__ = RuntimeError(HEALTH)
     monkeypatch.setattr(requests, "get", Mock(side_effect=error))
     sent = []
+
     def post(url, **kwargs):
         sent.append(kwargs["json"])
         return response()
+
     monkeypatch.setattr(requests, "post", post)
     assert getattr(main, "send_" + slot + "_report")() is False
     assert len(sent) == 1
@@ -98,9 +101,10 @@ def test_normal_health_payload_is_preserved(monkeypatch, caplog, capsys):
     sections = [{"title": "Sleep", "description": HEALTH, "fields": [{"name": "Score", "value": "82"}]}]
     assert DiscordClient("https://example.invalid/" + SECRET).send_health_report("Morning", sections)
     assert post.call_args.kwargs["json"] == {
-        "username": "Oura Ring Bot", "content": "Morning", "embeds": [
-            {"title": "Sleep", "description": HEALTH, "color": 0x00D4AA, "fields": sections[0]["fields"]}
-        ]}
+        "username": "Oura Ring Bot",
+        "content": "Morning",
+        "embeds": [{"title": "Sleep", "description": HEALTH, "color": 0x00D4AA, "fields": sections[0]["fields"]}],
+    }
     assert_private(caplog, capsys)
 
 
@@ -171,9 +175,11 @@ def test_actual_invalid_webhook_url_is_safe(monkeypatch, caplog, capsys):
 
 def test_safe_diagnostic_never_stringifies_exception(caplog, capsys):
     from diagnostics import safe_diagnostic
+
     class HostileError(Exception):
         def __str__(self):
             raise AssertionError("must not stringify")
+
     text = safe_diagnostic(HostileError(), provider=SECRET, operation=HEALTH, status=SECRET, attempt=HEALTH)
     assert text == "provider=unknown operation=unknown error=unexpected"
     assert_private(caplog, capsys)
@@ -190,22 +196,35 @@ def test_test_entrypoint_unexpected_error_is_safe(monkeypatch, caplog, capsys):
 
 @pytest.mark.parametrize("slot", ["morning", "noon", "night"])
 def test_success_through_real_clients_and_formatters(
-    monkeypatch, caplog, capsys, slot, sample_sleep_data, sample_sleep_details,
-    sample_readiness_data, sample_activity_data,
+    monkeypatch,
+    caplog,
+    capsys,
+    slot,
+    sample_sleep_data,
+    sample_sleep_details,
+    sample_readiness_data,
+    sample_activity_data,
 ):
     import json
     from datetime import date
+
     monkeypatch.setattr(main, "get_jst_today", lambda: date(2026, 2, 17))
     monkeypatch.setattr(main, "get_jst_hour", lambda: 13)
-    items = {"daily_sleep": sample_sleep_data, "sleep": sample_sleep_details,
-             "daily_readiness": sample_readiness_data, "daily_activity": sample_activity_data}
+    items = {
+        "daily_sleep": sample_sleep_data,
+        "sleep": sample_sleep_details,
+        "daily_readiness": sample_readiness_data,
+        "daily_activity": sample_activity_data,
+    }
     sent = []
+
     def send(request, **kwargs):
         if request.method == "GET":
             endpoint = request.url.split("?")[0].rsplit("/", 1)[1]
             return response(200, json.dumps({"data": [items[endpoint]]}))
         sent.append(json.loads(request.body))
         return response()
+
     # descriptor binding を避け、requests.PreparedRequest を引数に受け取る.
     monkeypatch.setattr(requests.Session, "send", Mock(side_effect=send))
     assert getattr(main, "send_" + slot + "_report")() is True
