@@ -21,11 +21,13 @@ jobs:
   unit:
     kind: test
     stage: unit
-    run: "uv run pytest --ignore=tests/api"
+    run: "uv run pytest"
   api:
     kind: api
     stage: api
     run: "uv run pytest tests/api"
+    skip: true
+    skip_reason: "tests/api がない（--extras testing で土台を追加し、契約テストを書いたら skip を外す）"
   e2e:
     kind: e2e
     stage: e2e
