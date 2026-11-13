@@ -34,6 +34,7 @@ from formatter import (  # noqa: E402
     format_night_report,
     format_noon_report,
 )
+from oura_auth import TokenResolver  # noqa: E402
 from oura_client import OuraClient  # noqa: E402
 
 # デフォルト設定
@@ -69,6 +70,12 @@ def get_jst_hour() -> int:
     return get_jst_now().hour
 
 
+def get_oura_client() -> OuraClient:
+    """実行時の OAuth トークンを解決する。"""
+    resolver = TokenResolver.from_environment()
+    return OuraClient(resolver.resolve(), token_resolver=resolver)
+
+
 # =============================================================================
 # 朝通知
 # =============================================================================
@@ -78,10 +85,9 @@ def send_morning_report() -> bool:
     """朝通知：睡眠 + Readiness + 今日の方針"""
     discord = None
     try:
-        oura_token = get_env_var("OURA_ACCESS_TOKEN")
         discord_webhook = get_env_var("DISCORD_WEBHOOK_URL")
 
-        oura = OuraClient(oura_token)
+        oura = get_oura_client()
         discord = DiscordClient(discord_webhook)
 
         # 前日の睡眠データと当日のReadinessを取得
@@ -152,11 +158,10 @@ def send_noon_report() -> bool:
     """昼通知：活動進捗 + 睡眠サマリー（朝に取れなかった場合の補完）"""
     discord = None
     try:
-        oura_token = get_env_var("OURA_ACCESS_TOKEN")
         discord_webhook = get_env_var("DISCORD_WEBHOOK_URL")
         steps_goal = int(get_env_var("DAILY_STEPS_GOAL", str(DEFAULT_STEPS_GOAL)))
 
-        oura = OuraClient(oura_token)
+        oura = get_oura_client()
         discord = DiscordClient(discord_webhook)
 
         today = get_jst_today()
@@ -207,11 +212,10 @@ def send_night_report() -> bool:
     """夜通知：今日の結果 + 減速リマインダー"""
     discord = None
     try:
-        oura_token = get_env_var("OURA_ACCESS_TOKEN")
         discord_webhook = get_env_var("DISCORD_WEBHOOK_URL")
         target_wake_time = os.environ.get("TARGET_WAKE_TIME", "07:00")
 
-        oura = OuraClient(oura_token)
+        oura = get_oura_client()
         discord = DiscordClient(discord_webhook)
 
         today = get_jst_today()

@@ -8,6 +8,7 @@ from typing import Optional
 import requests
 
 from diagnostics import safe_diagnostic, suppress_http_debug_logs
+from oura_auth import USER_AGENT, TokenResolver
 
 logger = logging.getLogger(__name__)
 
@@ -24,17 +25,21 @@ class OuraClient:
         timeout: float = 10.0,
         max_retries: int = 3,
         retry_backoff: float = 1.0,
+        token_resolver: Optional[TokenResolver] = None,
     ):
         suppress_http_debug_logs()
         self.access_token = access_token
-        self.headers = {"Authorization": f"Bearer {access_token}"}
+        self.headers = {"Authorization": f"Bearer {access_token}", "User-Agent": USER_AGENT}
+        self.token_resolver = token_resolver
         self.timeout = timeout
         self.max_retries = max_retries
         self.retry_backoff = retry_backoff
 
     def _request(self, url: str, params: Optional[dict] = None) -> dict:
         """APIリクエストを実行（リトライ付き）"""
-        for attempt in range(1, self.max_retries + 1):
+        refreshed = False
+        attempt = 1
+        while attempt <= self.max_retries:
             try:
                 response = requests.get(
                     url,
@@ -42,14 +47,26 @@ class OuraClient:
                     params=params,
                     timeout=self.timeout,
                 )
+                if (
+                    response.status_code == 401
+                    and self.token_resolver
+                    and self.token_resolver.oauth_ready
+                    and not refreshed
+                ):
+                    self.access_token = self.token_resolver.refresh()
+                    self.headers["Authorization"] = f"Bearer {self.access_token}"
+                    refreshed = True
+                    continue
                 if response.status_code in self.RETRY_STATUS_CODES and attempt < self.max_retries:
                     time.sleep(self.retry_backoff * attempt)
+                    attempt += 1
                     continue
                 response.raise_for_status()
                 return response.json()
             except requests.RequestException:
                 if attempt < self.max_retries:
                     time.sleep(self.retry_backoff * attempt)
+                    attempt += 1
                     continue
                 raise
 
