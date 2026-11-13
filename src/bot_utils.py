@@ -1,7 +1,6 @@
 """Bot共通ユーティリティ"""
 
 import asyncio
-import os
 import re
 from datetime import date, time, timedelta
 from typing import Optional
@@ -9,6 +8,7 @@ from zoneinfo import ZoneInfo
 
 import discord
 
+from oura_auth import TokenResolver
 from oura_client import OuraClient
 from settings import SettingsManager
 
@@ -61,10 +61,8 @@ def get_oura_client() -> OuraClient:
     """OuraClient のシングルトン取得"""
     global _oura_client
     if _oura_client is None:
-        token = os.environ.get("OURA_ACCESS_TOKEN")
-        if not token:
-            raise ValueError("OURA_ACCESS_TOKEN が設定されていません")
-        _oura_client = OuraClient(token)
+        resolver = TokenResolver.from_environment()
+        _oura_client = OuraClient(resolver.resolve(), token_resolver=resolver)
     return _oura_client
 
 

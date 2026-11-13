@@ -24,7 +24,7 @@ on:
 
 # 2重送信防止
 concurrency:
-  group: oura-notify-${{ github.event.schedule || github.event.inputs.type || 'manual' }}
+  group: oura-notify
   cancel-in-progress: false
 
 permissions:
@@ -79,7 +79,12 @@ jobs:
 
       - name: Send notification
         env:
+          OURA_CLIENT_ID: ${{ secrets.OURA_CLIENT_ID }}
+          OURA_CLIENT_SECRET: ${{ secrets.OURA_CLIENT_SECRET }}
+          OURA_REFRESH_TOKEN: ${{ secrets.OURA_REFRESH_TOKEN }}
           OURA_ACCESS_TOKEN: ${{ secrets.OURA_ACCESS_TOKEN }}
+          OURA_ACCESS_TOKEN_EXPIRES_AT: ${{ secrets.OURA_ACCESS_TOKEN_EXPIRES_AT }}
+          SECRETS_WRITE_TOKEN: ${{ secrets.SECRETS_WRITE_TOKEN }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           DAILY_STEPS_GOAL: ${{ vars.DAILY_STEPS_GOAL || '8000' }}
           TARGET_WAKE_TIME: ${{ vars.TARGET_WAKE_TIME || '07:00' }}

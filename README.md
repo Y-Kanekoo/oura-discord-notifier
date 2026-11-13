@@ -37,11 +37,19 @@ GitHub Actionsのcronスケジュールにより、1日3回の通知を自動送
 
 ## セットアップ
 
-### 1. Oura Personal Access Tokenを取得
+### 1. Oura OAuth2 アプリを登録
 
-1. [Oura Cloud](https://cloud.ouraring.com/personal-access-tokens) にアクセス
-2. 「Create New Personal Access Token」をクリック
-3. トークンをコピーして保存
+1. [Oura Cloud の My Applications](https://cloud.ouraring.com/oauth/applications) でシングルユーザー用アプリを登録します。アプリ作成と認可は利用者が行います。[公式認証仕様](https://cloud.ouraring.com/docs/authentication)も参照してください。
+2. 名前は `Oura Discord Notifier`、説明は `個人利用で Oura の睡眠・準備・活動・心拍・ワークアウトを読み Discord に通知するシングルユーザーアプリ` にします。
+3. Redirect URI に **`http://localhost:8765/callback`** を正確に登録します。スコープは **`daily personal heartrate workout`** だけを選びます。`email`、`tag`、`session`、`spo2` は不要です。
+4. GitHub CLI をインストールして対象リポジトリへ `gh auth login` でログインします。GitHub Secrets の更新用に、対象リポジトリ `Y-Kanekoo/oura-discord-notifier` の **Secrets: Read and write** 権限を持つ fine-grained PAT を用意します。
+5. ローカルで次を実行し、Client ID、Client Secret、GitHub Secrets 更新用 PAT を非表示入力します。認可 URL は Client ID を伏せて表示され、実際の URL がブラウザで開きます。callback は `127.0.0.1` と `::1` のポート 8765 で受けます。
+
+```bash
+python3 scripts/oura_oauth_setup.py
+```
+
+スクリプトは PKCE (S256) で code を交換し、`OURA_CLIENT_ID`、`OURA_CLIENT_SECRET`、`OURA_REFRESH_TOKEN`、`OURA_ACCESS_TOKEN`、`OURA_ACCESS_TOKEN_EXPIRES_AT` を GitHub Secrets に保存します。macOS では Keychain（service: `oura-discord-notifier`）にも保存します。
 
 ### 2. Discord Webhookを作成
 
@@ -62,19 +70,17 @@ GitHub Actionsのcronスケジュールにより、1日3回の通知を自動送
 
 | Secret名 | 値 |
 |----------|-----|
-| `OURA_ACCESS_TOKEN` | Ouraのアクセストークン |
+| `OURA_CLIENT_ID` / `OURA_CLIENT_SECRET` | Oura アプリの認証情報 |
+| `OURA_REFRESH_TOKEN` | 単回使用の refresh token |
+| `OURA_ACCESS_TOKEN` / `OURA_ACCESS_TOKEN_EXPIRES_AT` | 取得済み access token と失効時刻（Unix 秒）。PAT フォールバックも可能 |
+| `SECRETS_WRITE_TOKEN` | 対象リポジトリの Secrets: Read and write 権限付き fine-grained PAT（任意） |
 | `DISCORD_WEBHOOK_URL` | DiscordのWebhook URL |
 
 #### 方法B: GitHub CLI
 
-```bash
-# Secretを設定
-gh secret set OURA_ACCESS_TOKEN --body "トークンの値"
-gh secret set DISCORD_WEBHOOK_URL --body "Webhook URL"
+Oura の Secret は上のセットアップスクリプトが標準入力経由で設定します。Discord の Webhook URL は GitHub Web UI から登録してください。値をコマンド引数に置かないでください。
 
-# Secretの一覧を確認（値は見えない）
-gh secret list
-```
+OAuth 三方が揃っている場合、期限内の access token を使い、失効・未設定・API の 401 時だけ refresh します。Oura の refresh token は単回使用のため、更新後の refresh/access token と有効期限を保存します。GitHub Actions では `SECRETS_WRITE_TOKEN` がある場合だけ `gh secret set` を使います。標準の `GITHUB_TOKEN` には Secrets 更新権限がありません。`SECRETS_WRITE_TOKEN` が未設定、または保存に失敗した場合もその実行は続けますが、**次回 refresh 後は再認可が必要**です。三方が揃わない場合だけ `OURA_ACCESS_TOKEN` をフォールバックに使います。
 
 #### オプション設定
 
@@ -133,7 +139,7 @@ pip install -r requirements.txt
 
 # 環境変数を設定（.envファイルを作成）
 cp .env.example .env
-# .env を編集してトークンを設定
+# macOS は Keychain に保存された値を利用可能。他の環境では .env を編集
 
 # 実行
 cd src
@@ -159,7 +165,7 @@ python src/bot.py
 
 | ファイル | 役割 | 内容 |
 |----------|------|------|
-| `.env` | 認証情報・シークレット | `OURA_ACCESS_TOKEN`, `DISCORD_BOT_TOKEN`, `DISCORD_WEBHOOK_URL` など |
+| `.env` | 認証情報・シークレット | `OURA_CLIENT_ID`, `OURA_CLIENT_SECRET`, `OURA_REFRESH_TOKEN`, `DISCORD_BOT_TOKEN` など |
 | `data/settings.json` | Botの動的設定 | 歩数目標、リマインダー、ユーザーごとの設定など |
 
 `.env` はGitにコミットせず、各環境で個別に管理してください。`data/settings.json` はBotの実行中にコマンドで変更でき、自動的に保存されます。
@@ -276,16 +282,11 @@ chunk 分割、週平均・ストレスの optional fallback、昼の正常 skip
 
 | 原因 | 対処法 |
 |------|--------|
-| トークンが無効/Revoke済み | [Oura Cloud](https://cloud.ouraring.com/personal-access-tokens)で新しいトークンを発行 |
-| GitHub Secretsの設定ミス | トークンをコピーし直してSecretsを更新 |
+| refresh token が無効・失効済み | `python3 scripts/oura_oauth_setup.py` で再認可 |
+| GitHub Secrets の設定ミス | セットアップスクリプトで再保存 |
 | Membershipが無効 | Gen3/Ring4はアクティブなOura Membershipが必要 |
 
-**トークンの動作確認**:
-```bash
-# ローカルでAPIテスト
-curl -s "https://api.ouraring.com/v2/usercollection/personal_info" \
-  -H "Authorization: Bearer YOUR_TOKEN"
-```
+動作確認には GitHub Actions の手動実行を使い、ログに認証情報を表示しないでください。
 
 ### Discord送信失敗
 
@@ -310,8 +311,7 @@ curl -X POST "YOUR_WEBHOOK_URL" \
 
 ```bash
 # CLIで更新（推奨）
-gh secret set OURA_ACCESS_TOKEN --body "新しいトークン"
-gh secret set DISCORD_WEBHOOK_URL --body "新しいWebhook URL"
+python3 scripts/oura_oauth_setup.py
 
 # または Web UI から
 # Settings > Secrets and variables > Actions > 該当のSecretを編集
@@ -321,10 +321,10 @@ gh secret set DISCORD_WEBHOOK_URL --body "新しいWebhook URL"
 
 | 項目 | 内容 |
 |------|------|
-| Personal Access Token有効期限 | なし（期限切れにならない） |
+| OAuth access token有効期限 | トークン応答の `expires_in` に従う |
 | レート制限 | 5分間に5,000リクエスト |
 | Membership要件 | Gen3/Ring4はアクティブなMembershipが必要 |
-| 廃止予定 | Personal Access Tokenは2025年末に廃止予定 |
+| refresh token | 単回使用。更新後の値を保存する |
 
 ## アーキテクチャ
 
